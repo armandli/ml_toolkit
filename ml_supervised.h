@@ -11,6 +11,7 @@ struct Backpropagation: SNN<ACT> {
 private:
   void back_propagation(Mtx<double>& X, const Mtx<double>& O, const Mtx<double>& Y, Mtx<double>& dWxh, Mtx<double>& dWho, double reg){
     ACT activation;
+    Mtx<double>& Wxh = (*this).Wxh;
     Mtx<double>& Who = (*this).Who;
     Mtx<double>& H = (*this).H;
 
@@ -21,17 +22,22 @@ private:
     });
 
     dWho = H.t() * dY;
-    dWho.foreach([reg](double& d, const double& w){
-        d += reg * w;
-    }, Who);
-    H.t(); //revert transposition
+    H.t(); //revert internal transposition
 
     Mtx<double> dH = dY * Who.t();
     activation.deriviative(dH, H);
-    Who.t(); //revert transposition
+    Who.t(); //revert internal transposition
 
-    dWxh = X.t() * dH; //TODO: is there no regularization on dWxh ?
-    X.t(); //revert transposition
+    dWxh = X.t() * dH;
+    X.t(); //revert internal transposition
+
+    //regularizations
+    dWho.foreach([reg](double& d, const double& w){
+        d += reg * w;
+    }, Who);
+    dWxh.foreach([reg](double& d, const double& w){
+        d += reg * w;
+    }, Wxh);
   }
 
   void compute_loss(const Mtx<double>& O, const Mtx<double>& Y, size_t iteration, double reg, size_t loss_report){
