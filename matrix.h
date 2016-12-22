@@ -86,18 +86,23 @@ public:
   Mtx(): mData(nullptr) {} //mRows mCols undefined
   Mtx(size_t r, size_t c, T s = 0): mData(nullptr), mRows(r), mCols(c) {
     mData = new T[r * c];
+
+    if ((size_t)mData & 0x1) cout << "wow!" << endl; //gothere
+
     D1Iter(i, 0, r * c) mData[i] = s;
   }
   //NOTE: vector<T> is a vector of columns
   Mtx(size_t r, size_t c, const vector<T>& data): mData(nullptr), mRows(r), mCols(c) {
     assert(data.size() == r * c);
     mData = new T[r * c];
+    if ((size_t)mData & 0x1) cout << "wow!" << endl; //gothere
     memcpy(mData, data.data(), sizeof(T) * r * c);
   }
-  Mtx(const Mtx& o): mRows(o.mRows), mCols(o.mCols) {
+  Mtx(const Mtx& o): mData(nullptr), mRows(o.mRows), mCols(o.mCols) {
     T* optr = o.dataptr();
     if (not optr) return;
     mData = new T[rows() * cols()];
+    if ((size_t)mData & 0x1) cout << "wow!" << endl; //gothere
     memcpy(dataptr(), optr, sizeof(T) * rows() * cols());
     if (o.is_rotated())
       flip_bit();
@@ -112,9 +117,10 @@ public:
     T* data = dataptr();
     T* odata = o.dataptr();
     if (&o == this) return *this;
-    delete[] data;
+    if (data) delete[] data;
 
     mData = new T[o.rows() * o.cols()];
+    if ((size_t)mData & 0x1) cout << "wow!" << endl; //gothere
     mRows = o.rows();
     mCols = o.cols();
     memcpy(mData, odata, sizeof(T) * rows() * cols());
@@ -126,9 +132,10 @@ public:
     if (this == &o) return *this;
 
     T* data = dataptr();
-    delete[] data;
+    if (data) delete[] data;
 
     mData = o.mData;
+    if ((size_t)mData & 0x1) cout << "wow!" << endl; //gothere
     mRows = o.mRows;
     mCols = o.mCols;
 
