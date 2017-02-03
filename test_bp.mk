@@ -11,7 +11,7 @@ OPT= -static -O3 -lm
 
 LIBS=
 
-INCLUDES=-I../ -I./
+INCLUDES=-I../ -I./ -I./cpp/
 
 CXXFLAGS= -std=c++1y -Wall -Wextra $(INCLUDES) $(LIBS) $(OPT) $(DEBUG)
 
