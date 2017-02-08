@@ -8,7 +8,6 @@
 #include <iostream>
 
 #include <csv_reader.h>
-#include <ml_nn.h>
 #include <ml_ffn.h>
 
 #include <Eigen/Dense>
@@ -79,7 +78,7 @@ int main(){
   columns.insert((csv_reader::Column){"a", true});
   columns.insert((csv_reader::Column){"b", true});
   columns.insert((csv_reader::Column){"Y", true});
-  csv_reader reader("data/linear2d_5000.csv", columns);
+  csv_reader reader("../../data/linear2d_5000.csv", columns);
 
   if (not reader.is_open()) return 1;
 

@@ -7,7 +7,6 @@
 #include <iostream>
 #include <fstream>
 
-#include <ml_nn.h>
 #include <ml_ffn.h>
 
 using namespace std;
@@ -47,7 +46,7 @@ void create_input(const vector<double> v, MatrixXd& trainX, MatrixXd& trainY, Ma
 }
 
 int main(){
-  ifstream file("data/spiral_dataset.txt");
+  ifstream file("../../data/spiral_dataset.txt");
   vector<double> v; double tmp;
   while (file >> tmp){
     v.push_back(tmp);

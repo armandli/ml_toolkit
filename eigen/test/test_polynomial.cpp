@@ -8,7 +8,6 @@
 #include <iostream>
 
 #include <csv_reader.h>
-#include <ml_nn.h>
 #include <ml_ffn.h>
 
 #include <Eigen/Dense>
@@ -77,7 +76,7 @@ int main(){
   columns.insert((csv_reader::Column){"d", true});
   columns.insert((csv_reader::Column){"e", true});
   columns.insert((csv_reader::Column){"Y", true});
-  csv_reader reader("data/polynomial_5000.csv", columns);
+  csv_reader reader("../../data/polynomial_5000.csv", columns);
 
   if (not reader.is_open()) return 1;
 
