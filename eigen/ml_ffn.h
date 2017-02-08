@@ -7,7 +7,7 @@
 
 #include <Eigen/Dense>
 
-#include <ml_util.h>
+#include <ffn_util.h>
 
 using Eigen::MatrixXd;
 

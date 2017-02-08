@@ -239,7 +239,19 @@ struct MSE {
 template <int F = 1>
 struct MSVM {
   double loss(const MatrixXd& O, const MatrixXd& Y){
-    //TODO
+    double loss = 0.;
+    for (int i = 0; i < Y.rows(); ++i){
+      MatrixXd::Index midx; Y.row(i).maxCoeff(&midx);
+      double v = O(i, midx);
+      MatrixXd D = O.row(i).unaryExpr([&v](double d){
+          double e = d - v + (double)F;
+          if (e < 0.) e = 0.;
+          return e * e;
+      });
+      loss += D.array().sum() - (double)F * (double)F;
+    }
+    loss /= (double)Y.rows();
+    return loss;
   } 
   double accuracy(const MatrixXd& O, const MatrixXd& Y){
     int count = 0;
@@ -252,7 +264,17 @@ struct MSVM {
     return (double)count / (double)Y.rows();
   }
   MatrixXd deriviative(const MatrixXd& O, const MatrixXd& Y){
-    //TODO
+    MatrixXd D = O;
+    for (int i = 0; i < Y.rows(); ++i){
+      MatrixXd::Index midx; Y.row(i).maxCoeff(&midx);
+      double v = D(i, midx);
+      for (int j = 0; j < O.cols(); ++j){
+        D(i, j) = D(i, j) - v + (double)F;
+        if (D(i, j) < 0.) D(i, j) = 0.;
+        if (j == midx) D(i, j) = 0.;
+      }
+    }
+    return D;
   }
   void classification(MatrixXd&){/*NOOP*/}
 };
