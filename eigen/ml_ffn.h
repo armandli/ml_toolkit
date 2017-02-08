@@ -40,9 +40,7 @@ class FFN1 {
   }
 
   void back_propagation(const MatrixXd& X, const MatrixXd& O, const MatrixXd& Y, MatrixXd& dW){
-    MatrixXd dY = O - Y;
-    double sz = Y.rows();
-    dY = dY.unaryExpr([&sz](double d){ return d / sz; });
+    MatrixXd dY = cost.deriviative(O, Y);
     dW = X.transpose() * dY;
     regularization.regularize(dW, W, regularization_rate);
   }
@@ -56,8 +54,8 @@ class FFN1 {
   }
 public:
   FFN1(int iDim, int oDim, size_t iterations, double learning_rate, double regularization_rate, bool display_loss):
-    learning_rate(learning_rate), regularization_rate(regularization_rate), iterations(iterations), display_loss(display_loss),
-    W(random_matrix(iDim, oDim)), updateW(iDim, oDim){}
+    W(random_matrix(iDim, oDim)), updateW(iDim, oDim), learning_rate(learning_rate),
+    regularization_rate(regularization_rate), iterations(iterations), display_loss(display_loss){}
 
   double train(const MatrixXd& X, const MatrixXd& Y){
     for (int k = 0; k < iterations; ++k){
@@ -147,9 +145,7 @@ class FFN {
   }
 
   void back_propagation(const MatrixXd& X, const MatrixXd& O, const MatrixXd& Y, vector<MatrixXd>& dWs){
-    MatrixXd dY = O - Y;
-    double sz = Y.rows();
-    dY = dY.unaryExpr([&sz](double d){ return d / sz; });
+    MatrixXd dY = cost.deriviative(O, Y);
     MatrixXd dWz = Hs.back().transpose() * dY;
     regularization.regularize(dWz, Ws.back(), regularization_rate);
     dWs.push_back(dWz);

@@ -96,7 +96,7 @@ int main(){
   dims.push_back(6);
   dims.push_back(64);
   dims.push_back(1);
-  FFN<MSE, ReluFun, L2Reg, AdamUpdate, false> network(dims, 10000, 0.08, 0.001, true);
+  FFN<MSE, ReluFun, L2Reg, AdamUpdate<>, false> network(dims, 10000, 0.08, 0.001, true);
   
   double train_accuracy = network.train(read_function.trainX, read_function.trainY);
   double test_accuracy = network.test(read_function.testX, read_function.testY);

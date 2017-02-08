@@ -57,10 +57,11 @@ struct ReluFun {
 };
 
 /* Regularization Functions */
+template <long MNom = 5, long MDnom = 1>
 class MaxNormReg {
   double maxval;
 public:
-  explicit MaxNormReg(double maxval = 5.): maxval(maxval) {}
+  explicit MaxNormReg(double maxval = (double)MNom / (double)MDnom): maxval(maxval) {}
   double loss(MatrixXd&, double){
     return 0.;
   }
@@ -99,8 +100,9 @@ MatrixXd dropout_mask(int r, int c, double p = 0.5){
   return mask;
 }
 
+template <long PNom = 1, long PDnom = 2>
 void apply_dropout(MatrixXd& H){
-  MatrixXd U = dropout_mask(H.rows(), H.cols());
+  MatrixXd U = dropout_mask(H.rows(), H.cols(), (double)PNom / (double)PDnom);
   H = H.binaryExpr(U, [](double h, double u){
       return h * u;
   });
@@ -108,7 +110,7 @@ void apply_dropout(MatrixXd& H){
 
 /* Parameter Update Functions */
 struct SimpleUpdate {
-  SimpleUpdate(int rsize, int csize){}
+  SimpleUpdate(int, int){}
   void update(MatrixXd& W, const MatrixXd& dW, double lrate){
     W = W.binaryExpr(dW, [&lrate](double w, double d){
         return w + -1. * lrate * d;
@@ -116,22 +118,24 @@ struct SimpleUpdate {
   }
 };
 
+template <long MUNom = 9, long MUDnom = 10>
 class MomentumUpdate {
   MatrixXd V;
   double mu;
 public:
-  MomentumUpdate(int rsize, int csize, double mu = 0.9): V(MatrixXd::Zero(rsize, csize)), mu(mu) {}
+  MomentumUpdate(int rsize, int csize, double mu = (double)MUNom / (double)MUDnom): V(MatrixXd::Zero(rsize, csize)), mu(mu) {}
   void update(MatrixXd& W, const MatrixXd& dW, double lrate){
     V = V * mu - dW * lrate;
     W += V;
   }
 };
 
+template <long MUNom = 9, long MUDnom = 10>
 class NesterovUpdate {
   MatrixXd Vp, V;
   double mu;
 public:
-  NesterovUpdate(int rsize, int csize, double mu = 0.9):
+  NesterovUpdate(int rsize, int csize, double mu = (double)MUNom / (double)MUDnom):
     Vp(MatrixXd::Zero(rsize, csize)), V(MatrixXd::Zero(rsize, csize)), mu(mu) {}
   void update(MatrixXd& W, const MatrixXd& dW, double lrate){
     Vp = V;
@@ -155,11 +159,12 @@ public:
   }
 };
 
+template <long Dnom = 99, long DDnom = 100>
 class RMSPropUpdate {
   MatrixXd mW;
   double decay;
 public:
-  RMSPropUpdate(int rsize, int csize, double decay = 0.99): mW(MatrixXd::Zero(rsize, csize)), decay(decay) {}
+  RMSPropUpdate(int rsize, int csize, double decay = (double)Dnom / (double)DDnom): mW(MatrixXd::Zero(rsize, csize)), decay(decay) {}
   void update(MatrixXd& W, const MatrixXd& dW, double lrate){
     mW = mW.binaryExpr(dW, [this](double m, double d){
         return decay * m + (1. - decay) * (d * d);
@@ -171,11 +176,12 @@ public:
   }
 };
 
+template <long B1Nom = 9000, long B2Nom = 9990, long Dnom = 10000>
 class AdamUpdate {
   MatrixXd M, V;
   double b1, b2;
 public:
-  AdamUpdate(int rsize, int csize, double b1 = 0.9, double b2 = 0.999):
+  AdamUpdate(int rsize, int csize, double b1 = (double)B1Nom / (double)Dnom, double b2 = (double)B2Nom / (double)Dnom):
     M(MatrixXd::Zero(rsize, csize)), V(MatrixXd::Zero(rsize, csize)), b1(b1), b2(b2) {}
   void update(MatrixXd& W, const MatrixXd& dW, double lrate){
     M = M.binaryExpr(dW, [this](double m, double d){
@@ -196,7 +202,7 @@ public:
 class ConstantRate {
   double learn;
 public:
-  ConstantRate(double init, int iterations): learn(init){}
+  ConstantRate(double init, int): learn(init){}
   double rate(){ return learn; }
 };
 
@@ -221,7 +227,34 @@ struct MSE {
     D = D.unaryExpr([](double d){ return d * d; });
     return sqrt(D.array().sum()) * 0.5 / (double)O.rows();
   }
-  void classification(MatrixXd& O){/*NOOP*/}
+  MatrixXd deriviative(const MatrixXd& O, const MatrixXd& Y){
+    MatrixXd dY = O - Y;
+    double sz = Y.rows();
+    dY = dY.unaryExpr([&sz](double d){ return d / sz; });
+    return dY;
+  }
+  void classification(MatrixXd&){/*NOOP*/}
+};
+
+template <int F = 1>
+struct MSVM {
+  double loss(const MatrixXd& O, const MatrixXd& Y){
+    //TODO
+  } 
+  double accuracy(const MatrixXd& O, const MatrixXd& Y){
+    int count = 0;
+    for (int i = 0; i < O.rows(); ++i){
+      MatrixXd::Index idxO, idxY;
+      Y.row(i).maxCoeff(&idxY);
+      O.row(i).maxCoeff(&idxO);
+      if (idxO == idxY) count++;
+    }
+    return (double)count / (double)Y.rows();
+  }
+  MatrixXd deriviative(const MatrixXd& O, const MatrixXd& Y){
+    //TODO
+  }
+  void classification(MatrixXd&){/*NOOP*/}
 };
 
 void softmax(MatrixXd& m, MatrixDim dim){
@@ -257,6 +290,12 @@ struct CrossEntropy {
       if (idxO == idxY) count++;
     }
     return (double)count / (double)Y.rows();
+  }
+  MatrixXd deriviative(const MatrixXd& O, const MatrixXd& Y){
+    MatrixXd dY = O - Y;
+    double sz = Y.rows();
+    dY = dY.unaryExpr([&sz](double d){ return d / sz; });
+    return dY;
   }
   void classification(MatrixXd& O){
     softmax(O, MatrixDim::RowDim);

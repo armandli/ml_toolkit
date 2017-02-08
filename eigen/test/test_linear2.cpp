@@ -86,7 +86,7 @@ int main(){
   reader.process(read_function);
   read_function.genXY();
 
-  FFN1<MSE, L2Reg, NesterovUpdate> network(3, 1, 10000, 0.0001, 0.000001, true);
+  FFN1<MSE, L2Reg, NesterovUpdate<>> network(3, 1, 10000, 0.0001, 0.000001, true);
 
 //  vector<int> dims;
 //  dims.push_back(6);

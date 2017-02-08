@@ -88,7 +88,7 @@ int main(){
   layers.push_back(6);
   layers.push_back(64);
   layers.push_back(1);
-  FFN<MSE, ReluFun, L2Reg, AdamUpdate, false> network(layers, 200000, 0.08, 0.001, true);
+  FFN<MSE, ReluFun, L2Reg, AdamUpdate<>, false> network(layers, 200000, 0.08, 0.001, true);
 
   double train_accuracy = network.train(read_function.trainX, read_function.trainY);
   double test_accuracy = network.test(read_function.testX, read_function.testY);

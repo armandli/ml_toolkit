@@ -60,7 +60,7 @@ int main(){
   dims.push_back(trainX.cols());
   dims.push_back(128);
   dims.push_back(trainY.cols());
-  FFN<CrossEntropy, ReluFun, L2Reg, AdamUpdate, true> net(dims, 2000, 0.08, 0.001, true);
+  FFN<CrossEntropy, ReluFun, L2Reg, AdamUpdate<>, true> net(dims, 2000, 0.08, 0.001, true);
   double train_accuracy = net.train(trainX, trainY);
   double test_accuracy = net.test(testX, testY);
 
