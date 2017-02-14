@@ -4,6 +4,7 @@
 #include <ctime>
 #include <random>
 #include <set>
+#include <Eigen/Dense>
 
 void validation_split(const MatrixXd& X, const MatrixXd& Y, double testPercentage, MatrixXd& trainX, MatrixXd& trainY, MatrixXd& testX, MatrixXd& testY){
   uniform_int_distribution<size_t> dist(0, X.rows() - 1);
