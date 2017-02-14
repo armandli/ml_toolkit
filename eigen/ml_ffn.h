@@ -75,11 +75,27 @@ public:
   MatrixXd predict(const MatrixXd& X){
     return feed_forward(X);
   }
-  void save(const string& filename){
-    //TODO
+  void save(const char* filename){
+    ofstream out(filename, ios::out | ios::binary | ios::trunc);
+    int dl = display_loss;
+
+    out.write((char*)&learning_rate, sizeof(double));
+    out.write((char*)&regularization_rate, sizeof(double));
+    out.write((char*)&iterations, sizeof(size_t));
+    out.write((char*)&dl, sizeof(int));
+    out << W;
   }
-  void load(const string& filename){
-    //TODO
+  void load(const char* filename){
+    ifstream in(filename, ios::in | ios::binary);
+    int dl;
+
+    in.read((char*)&learning_rate, sizeof(double));
+    in.read((char*)&regularization_rate, sizeof(double));
+    in.read((char*)&iterations, sizeof(size_t));
+    in.read((char*)&dl, sizeof(int));
+    in >> W;
+
+    display_loss = dl;
   }
 };
 
@@ -205,12 +221,37 @@ public:
     return feed_forward(X);
   }
 
-  void save(const string& filename){
-    //TODO
+  void save(const char* filename){
+    ofstream out(filename, ios::out | ios::binary | ios::trunc);
+    size_t wsize = Ws.size();
+    int dl = display_loss;
+
+    out.write((char*)&learning_rate, sizeof(double));
+    out.write((char*)&regularization_rate, sizeof(double));
+    out.write((char*)&iterations, sizeof(size_t));
+    out.write((char*)&dl, sizeof(int));
+    out.write((char*)&wsize, sizeof(size_t));
+    for (size_t i = 0; i < Ws.size(); ++i){
+      out << Ws[i];
+    }
   }
 
-  void load(const string& filename){
-    //TODO
+  void load(const char* filename){
+    ifstream in(filename, ios::in | ios::binary);
+    size_t wsize; int dl;
+    Ws.clear();
+
+    in.read((char*)&learning_rate, sizeof(double));
+    in.read((char*)&regularization_rate, sizeof(double));
+    in.read((char*)&iterations, sizeof(size_t));
+    in.read((char*)&dl, sizeof(int));
+    in.read((char*)&wsize, sizeof(size_t));
+    for (size_t i = 0; i < wsize; ++i){
+      MatrixXd mtx; in >> mtx;
+      Ws.emplace_back(std::move(mtx));
+    }
+
+    display_loss = dl;
   }
 };
 

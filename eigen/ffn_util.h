@@ -317,4 +317,22 @@ struct CrossEntropy {
   }
 };
 
+/* Reading and Writing MatrixXd binary */
+ofstream& operator<<(ofstream& out, const MatrixXd& mtx){
+  MatrixXd::Index rows = mtx.rows(), cols = mtx.cols();
+  out.write((char*)&rows, sizeof(MatrixXd::Index));
+  out.write((char*)&cols, sizeof(MatrixXd::Index));
+  out.write((char*)mtx.data(), rows * cols * sizeof(double));
+  return out;
+}
+
+ifstream& operator>>(ifstream& in, MatrixXd& mtx){
+  MatrixXd::Index rows, cols;
+  in.read((char*)&rows, sizeof(MatrixXd::Index));
+  in.read((char*)&cols, sizeof(MatrixXd::Index));
+  mtx.resize(rows, cols);
+  in.read((char*)mtx.data(), rows * cols * sizeof(double));
+  return in;
+}
+
 #endif
