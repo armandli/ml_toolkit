@@ -28,6 +28,7 @@ class csv_reader {
 
   FILE* m_fd;
   const char* m_delim;
+  const char* m_escape;
   int m_max_sz;
   vector<map<string, const char*>::iterator> m_columns;
   map<string, const char*> m_linemap;
@@ -46,14 +47,30 @@ class csv_reader {
     char* ret = fgets(buffer, max_size, fd);
     char* el = strrchr(buffer, '\n');
     if (el) *el = '\0';
+    el = std::strchr(buffer, '\r');
+    if (el) *el = '\0';
     return ret;
   }
 
-  char* strtok(char* __restrict__ str, const char* const __restrict__ delim){
+  char* strtok(char* __restrict__ str, const char* const __restrict__ delim, const char* const __restrict__ escape){
     char* start = str ? str : m_strtok_register;
     if (not start) return NULL;
 
     char* ret = start;
+
+    //handling escape quotes
+    if (std::strchr(escape, *start)){
+      start = ++ret;
+      for (; *start && not std::strchr(escape, *start); ++start)
+        if (*start == '\\' && 1[start]){
+          ++start;
+          continue;
+        }
+      if (*start && std::strchr(escape, *start)){
+        *start = '\0';
+        ++start;
+      }
+    }
 
     for (; *start && not strchr(delim, *start); ++start);
 
@@ -85,24 +102,20 @@ class csv_reader {
     map<const char*, int> found;
   
     int col_count = 0;
-    for (char* pc = (*this).strtok(buffer, m_delim); pc; ++col_count, pc = (*this).strtok(NULL, m_delim)){
+    for (char* pc = (*this).strtok(buffer, m_delim, m_escape); pc; ++col_count, pc = (*this).strtok(NULL, m_delim, m_escape)){
       found.insert(make_pair(pc, col_count));
       m_linemap.insert(make_pair(string(pc), (const char*)0));
     }
 
     m_columns = vector<map<string, const char*>::iterator>(col_count + 1);
   
-//    m_columns.reserve(col_count + 1);
-//  
-//    for (int i = 0; i < col_count; ++i)
-//      m_columns.push_back(m_linemap.end());
     for (map<const char*, int>::iterator it = found.begin(); it != found.end(); ++it)
       m_columns[(*it).second] = m_linemap.find(string((*it).first));
   }
 
   void read(Buffer& buffer){
-    char* pc = (*this).strtok(buffer, m_delim);
-    for (int col = 0; pc; ++col, pc = (*this).strtok(NULL, m_delim)){
+    char* pc = (*this).strtok(buffer, m_delim, m_escape);
+    for (int col = 0; pc; ++col, pc = (*this).strtok(NULL, m_delim, m_escape)){
       map<string, const char*>::iterator it = m_columns[col];
       if (it != m_linemap.end()){
         (*it).second = pc;
@@ -111,8 +124,8 @@ class csv_reader {
   }
 
 public:
-  csv_reader(const char* filename, const char* delimiter = ",", int max_size = 4096) :
-      m_fd(fopen64(filename, "r")), m_delim(delimiter), m_max_sz(max_size), m_strtok_register(NULL), m_buffer(max_size) {
+  csv_reader(const char* filename, const char* delimiter = ",", const char* escape = "\"", int max_size = 4096) :
+      m_fd(fopen64(filename, "r")), m_delim(delimiter), m_escape(escape), m_max_sz(max_size), m_strtok_register(NULL), m_buffer(max_size) {
     if (m_fd == NULL){
       stringstream ss;
       ss << "Failed to open file " << filename;

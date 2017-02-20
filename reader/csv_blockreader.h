@@ -25,6 +25,7 @@ class csv_blockreader {
 
   FILE* m_fd;
   const char* m_delim;
+  const char* m_escape;
   int m_max_sz;
   string m_error;
   char* m_strtok_register;
@@ -41,14 +42,30 @@ class csv_blockreader {
     char* ret = fgets(buffer, max_size, fd);
     char* el = std::strrchr(buffer, '\n');
     if (el) *el = '\0';
+    el = std::strrchr(buffer, '\r');
+    if (el) *el = '\0';
     return ret;
   }
 
-  char* strtok(char* __restrict__ str, const char* const __restrict__ delim){
+  char* strtok(char* __restrict__ str, const char* const __restrict__ delim, const char* const __restrict__ escape){
     char* start = str ? str : m_strtok_register;
     if (not start) return NULL;
 
     char* ret = start;
+
+    //handling escape quotes
+    if (std::strchr(escape, *start)){
+      start = ++ret;
+      for (; *start && not std::strchr(escape, *start); ++start)
+        if (*start == '\\' && 1[start]){
+          ++start;
+          continue;
+        }
+      if (*start && std::strchr(escape, *start)){
+        *start = '\0';
+        ++start;
+      }
+    }
 
     for (; *start && not std::strchr(delim, *start); ++start);
 
@@ -76,8 +93,8 @@ class csv_blockreader {
     }
   }
 public:
-  csv_blockreader(const char* filename, const char* delimiter = ",", int max_size = 4096, bool header = true):
-    m_fd(fopen64(filename, "r")), m_delim(delimiter), m_max_sz(max_size), m_buffer(max_size) {
+  csv_blockreader(const char* filename, const char* delimiter = ",", int max_size = 4096, const char* escape = "\"", bool header = true):
+    m_fd(fopen64(filename, "r")), m_delim(delimiter), m_escape(escape), m_max_sz(max_size), m_buffer(max_size) {
     if (m_fd == NULL){
       std::stringstream ss;
       ss << "Failed to open file " << filename;
@@ -95,7 +112,7 @@ public:
     if (not get_line(m_buffer, m_max_sz, m_fd))
       return false;
 
-    for (char* pc = (*this).strtok(m_buffer, m_delim); pc; pc = (*this).strtok(NULL, m_delim))
+    for (char* pc = (*this).strtok(m_buffer, m_delim, m_escape); pc; pc = (*this).strtok(NULL, m_delim, m_escape))
       columns.push_back(pc);
     return true;
   }
