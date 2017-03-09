@@ -230,7 +230,11 @@ struct MSE {
   MatrixXd deriviative(const MatrixXd& O, const MatrixXd& Y){
     MatrixXd dY = O - Y;
     double sz = Y.rows();
-    dY = dY.unaryExpr([&sz](double d){ return d / sz; });
+    dY = dY.unaryExpr([&sz](double d){
+        double ret = d / sz;
+        if (isnan(ret)) ret = 0.;
+        return ret;
+    });
     return dY;
   }
   void classification(MatrixXd&){/*NOOP*/}
@@ -266,7 +270,11 @@ struct MSVM {
   MatrixXd deriviative(const MatrixXd& O, const MatrixXd& Y){
     MatrixXd dY = O - Y;
     double sz = Y.rows();
-    dY = dY.unaryExpr([&sz](double d){ return d / sz; });
+    dY = dY.unaryExpr([&sz](double d){
+        double ret = d / sz;
+        if (isnan(ret)) ret = 0.;
+        return ret;
+    });
     return dY;
   }
   void classification(MatrixXd&){/*NOOP*/}
@@ -309,7 +317,11 @@ struct CrossEntropy {
   MatrixXd deriviative(const MatrixXd& O, const MatrixXd& Y){
     MatrixXd dY = O - Y;
     double sz = Y.rows();
-    dY = dY.unaryExpr([&sz](double d){ return d / sz; });
+    dY = dY.unaryExpr([&sz](double d){
+        double ret = d / sz;
+        if (isnan(ret)) ret = 0.;
+        return ret;
+    });
     return dY;
   }
   void classification(MatrixXd& O){

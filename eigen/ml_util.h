@@ -3,42 +3,73 @@
 
 #include <ctime>
 #include <random>
-#include <set>
+#include <map>
 #include <Eigen/Dense>
 
-void validation_split(const MatrixXd& X, const MatrixXd& Y, double testPercentage, MatrixXd& trainX, MatrixXd& trainY, MatrixXd& testX, MatrixXd& testY){
-  uniform_int_distribution<size_t> dist(0, X.rows() - 1);
-  default_random_engine eng(time(0));
-  size_t testn = X.rows() * testPercentage;
-  set<size_t> test_rows;
+using namespace std;
 
-  while (test_rows.size() < testn)
-    test_rows.insert(dist(eng));
+template <typename T>
+struct CatStat {
+  map<T, size_t> types;
+  T avg;
+};
 
-  trainX = MatrixXd(X.rows() - testn, X.cols());
-  trainY = MatrixXd(Y.rows() - testn, Y.cols());
-  testX  = MatrixXd(testn, X.cols());
-  testY  = MatrixXd(testn, Y.cols());
+template <typename T>
+struct NumStat {
+  T avg;
+  T sdv;
+  size_t count;
+};
 
-  for (size_t i = 0, traini = 0, testi = 0; i < X.rows(); ++i){
-    if (test_rows.find(i) == test_rows.end()){
-      trainX.block(traini, 0, 1, X.cols()) = X.block(i, 0, 1, X.cols());
-      trainY.block(traini, 0, 1, Y.cols()) = Y.block(i, 0, 1, Y.cols());
-      traini++;
-    } else {
-      testX.block(testi, 0, 1, X.cols()) = X.block(i, 0, 1, X.cols());
-      testY.block(testi, 0, 1, Y.cols()) = Y.block(i, 0, 1, Y.cols());
-      testi++;
-    }
+//TODO: convert each into using the stats struct above
+template <typename T>
+void update_categorical_column_stat(const string&, map<T, size_t>&);
+template <>
+void update_categorical_column_stat(const string& val, map<int, size_t>& smap){
+  if (not val.empty()){
+    int type = atoi(val.c_str());
+    if (smap.find(type) != smap.end())
+      smap[type]++;
+    else
+      smap[type] = 1;
+  }
+}
+template <>
+void update_categorical_column_stat(const string& val, map<string, size_t>& smap){
+  if (not val.empty()){
+    if (smap.find(val) != smap.end())
+      smap[val]++;
+    else
+      smap[val] = 1;
   }
 }
 
-MatrixXd add_bias(const MatrixXd& X){
-  MatrixXd ret(X.rows(), X.cols() + 1);
-  MatrixXd ones = MatrixXd::Ones(X.rows(), 1);
-  ret.block(0, 0, X.rows(), X.cols()) = X;
-  ret.block(0, X.cols(), X.rows(), 1) = ones;
-  return ret;
+template <typename T>
+void update_numerical_avg(const string& val, T& avg, size_t& count);
+template <>
+void update_numerical_avg(const string& val, double& avg, size_t& count){
+  if (not val.empty()){
+    avg += atof(val.c_str());
+    count++;
+  }
+}
+
+template <typename T>
+void update_numerical_sdv(const string& val, const T& avg, T& sdv);
+template <>
+void update_numerical_sdv(const string& val, const double& avg, double& sdv){
+  if (not val.empty())
+    sdv += pow(atof(val.c_str()) - avg, 2);
+}
+
+template <typename T>
+void compute_categorical_avg(const map<T, size_t>& m, T& avg){
+  size_t tmp = 0;
+  for (typename map<T, size_t>::const_iterator it = m.cbegin(); it != m.cend(); ++it)
+    if ((*it).second > tmp){
+      avg = (*it).first;
+      tmp = (*it).second;
+    }   
 }
 
 #endif
