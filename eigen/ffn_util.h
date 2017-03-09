@@ -57,11 +57,11 @@ struct ReluFun {
 };
 
 /* Regularization Functions */
-template <long MNom = 5, long MDnom = 1>
-class MaxNormReg {
+template <long MNom, long MDnom>
+class MaxNormReg_ {
   double maxval;
 public:
-  explicit MaxNormReg(double maxval = (double)MNom / (double)MDnom): maxval(maxval) {}
+  explicit MaxNormReg_(double maxval = (double)MNom / (double)MDnom): maxval(maxval) {}
   double loss(MatrixXd&, double){
     return 0.;
   }
@@ -73,6 +73,7 @@ public:
     });
   }
 };
+using MaxNormReg = MaxNormReg_<5, 1>;
 
 struct L2Reg {
   double loss(MatrixXd& W, double reg){
@@ -100,12 +101,15 @@ MatrixXd dropout_mask(int r, int c, double p = 0.5){
   return mask;
 }
 
-template <long PNom = 1, long PDnom = 2>
-void apply_dropout(MatrixXd& H){
+template <long PNom, long PDnom>
+void apply_dropout_(MatrixXd& H){
   MatrixXd U = dropout_mask(H.rows(), H.cols(), (double)PNom / (double)PDnom);
   H = H.binaryExpr(U, [](double h, double u){
       return h * u;
   });
+}
+void apply_dropout(MatrixXd& H){
+  apply_dropout_<1, 2>(H);
 }
 
 /* Parameter Update Functions */
@@ -118,24 +122,25 @@ struct SimpleUpdate {
   }
 };
 
-template <long MUNom = 9, long MUDnom = 10>
-class MomentumUpdate {
+template <long MUNom, long MUDnom>
+class MomentumUpdate_ {
   MatrixXd V;
   double mu;
 public:
-  MomentumUpdate(int rsize, int csize, double mu = (double)MUNom / (double)MUDnom): V(MatrixXd::Zero(rsize, csize)), mu(mu) {}
+  MomentumUpdate_(int rsize, int csize, double mu = (double)MUNom / (double)MUDnom): V(MatrixXd::Zero(rsize, csize)), mu(mu) {}
   void update(MatrixXd& W, const MatrixXd& dW, double lrate){
     V = V * mu - dW * lrate;
     W += V;
   }
 };
+using MomentumUpdate = MomentumUpdate_<9, 10>;
 
-template <long MUNom = 9, long MUDnom = 10>
-class NesterovUpdate {
+template <long MUNom, long MUDnom>
+class NesterovUpdate_ {
   MatrixXd Vp, V;
   double mu;
 public:
-  NesterovUpdate(int rsize, int csize, double mu = (double)MUNom / (double)MUDnom):
+  NesterovUpdate_(int rsize, int csize, double mu = (double)MUNom / (double)MUDnom):
     Vp(MatrixXd::Zero(rsize, csize)), V(MatrixXd::Zero(rsize, csize)), mu(mu) {}
   void update(MatrixXd& W, const MatrixXd& dW, double lrate){
     Vp = V;
@@ -143,6 +148,7 @@ public:
     W += Vp * (mu * -1.) + V * (1. + mu);
   }
 };
+using NesterovUpdate = NesterovUpdate_<9, 10>;
 
 class AdagradUpdate {
   MatrixXd mW;
@@ -159,12 +165,12 @@ public:
   }
 };
 
-template <long Dnom = 99, long DDnom = 100>
-class RMSPropUpdate {
+template <long Dnom, long DDnom>
+class RMSPropUpdate_ {
   MatrixXd mW;
   double decay;
 public:
-  RMSPropUpdate(int rsize, int csize, double decay = (double)Dnom / (double)DDnom): mW(MatrixXd::Zero(rsize, csize)), decay(decay) {}
+  RMSPropUpdate_(int rsize, int csize, double decay = (double)Dnom / (double)DDnom): mW(MatrixXd::Zero(rsize, csize)), decay(decay) {}
   void update(MatrixXd& W, const MatrixXd& dW, double lrate){
     mW = mW.binaryExpr(dW, [this](double m, double d){
         return decay * m + (1. - decay) * (d * d);
@@ -175,13 +181,14 @@ public:
     W += smW;
   }
 };
+using RMSPropUpdate = RMSPropUpdate_<99, 100>;
 
-template <long B1Nom = 9000, long B2Nom = 9990, long Dnom = 10000>
-class AdamUpdate {
+template <long B1Nom, long B2Nom, long Dnom>
+class AdamUpdate_ {
   MatrixXd M, V;
   double b1, b2;
 public:
-  AdamUpdate(int rsize, int csize, double b1 = (double)B1Nom / (double)Dnom, double b2 = (double)B2Nom / (double)Dnom):
+  AdamUpdate_(int rsize, int csize, double b1 = (double)B1Nom / (double)Dnom, double b2 = (double)B2Nom / (double)Dnom):
     M(MatrixXd::Zero(rsize, csize)), V(MatrixXd::Zero(rsize, csize)), b1(b1), b2(b2) {}
   void update(MatrixXd& W, const MatrixXd& dW, double lrate){
     M = M.binaryExpr(dW, [this](double m, double d){
@@ -196,6 +203,7 @@ public:
     W += S;
   }
 };
+using AdamUpdate = AdamUpdate_<9000, 9990, 10000>;
 
 //TODO: learning rate decay functions
 /* Learning Rate Functions */
@@ -240,8 +248,8 @@ struct MSE {
   void classification(MatrixXd&){/*NOOP*/}
 };
 
-template <int F = 1>
-struct MSVM {
+template <int F>
+struct MSVM_ {
   double loss(const MatrixXd& O, const MatrixXd& Y){
     double loss = 0.;
     for (int i = 0; i < O.rows(); ++i){
@@ -279,6 +287,7 @@ struct MSVM {
   }
   void classification(MatrixXd&){/*NOOP*/}
 };
+using MSVM = MSVM_<1>;
 
 void softmax(MatrixXd& m, MatrixDim dim){
   m = m.unaryExpr([](double d){ return exp(d); });

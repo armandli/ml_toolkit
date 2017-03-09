@@ -86,13 +86,13 @@ int main(){
   reader.process(read_function);
   read_function.genXY();
 
-  FFN1<MSE, L2Reg, NesterovUpdate<>> network(3, 1, 10000, 0.0001, 0.000001, true);
+  FFN1<MSE, L2Reg, NesterovUpdate> network(3, 1, 10000, 0.0001, 0.000001, true);
 
 //  vector<int> dims;
 //  dims.push_back(3);
 //  dims.push_back(64);
 //  dims.push_back(1);
-//  FFN<MSE, TanhFun, L2Reg, AdamUpdate<>, false> network(dims, 10000, 0.08, 0.001, true);
+//  FFN<MSE, TanhFun, L2Reg, AdamUpdate, false> network(dims, 10000, 0.08, 0.001, true);
   
   double train_accuracy = network.train(read_function.trainX, read_function.trainY);
   double test_accuracy = network.test(read_function.testX, read_function.testY);
@@ -101,8 +101,8 @@ int main(){
 
   network.save("test_saveload.sav");
 
-  FFN1<MSE, L2Reg, NesterovUpdate<>> network2(3, 1, 10000, 0.0001, 0.000001, true);
-//  FFN<MSE, TanhFun, L2Reg, AdamUpdate<>, false> network2(dims, 10000, 0.08, 0.001, true);
+  FFN1<MSE, L2Reg, NesterovUpdate> network2(3, 1, 10000, 0.0001, 0.000001, true);
+//  FFN<MSE, TanhFun, L2Reg, AdamUpdate, false> network2(dims, 10000, 0.08, 0.001, true);
   network2.load("test_saveload.sav");
 
   double test_accuracy2 = network2.test(read_function.testX, read_function.testY);
