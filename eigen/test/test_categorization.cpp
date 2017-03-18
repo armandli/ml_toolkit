@@ -16,11 +16,10 @@ void create_input(const vector<double> v, MatrixXd& trainX, MatrixXd& trainY, Ma
   int total_rows = v.size() / 3;
 
   uniform_int_distribution<int> dist(0, total_rows - 1);
-  default_random_engine eng(time(0));
   set<int> test_rows;
 
   while (test_rows.size() < total_rows / 10)
-    test_rows.insert(dist(eng));
+    test_rows.insert(dist(get_default_random_engine()));
 
   trainX = MatrixXd(total_rows - test_rows.size(), 3);
   trainY = MatrixXd(total_rows - test_rows.size(), 3);

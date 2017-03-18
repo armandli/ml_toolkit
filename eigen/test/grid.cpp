@@ -5,6 +5,7 @@
 
 #include <Eigen/Dense>
 
+#include <ml_util.h>
 #include <ml_ffn.h>
 
 using Eigen::MatrixXd;
@@ -29,6 +30,7 @@ struct Game {
   Game(){ memset(board, 0, sizeof(int) * SIZE * SIZE); }
 };
 
+/* simple basic game */
 Game create_game1(){
   Game ret;
   ret.board[0][1] ^= PMASK;
@@ -51,6 +53,7 @@ m:switch (move){
     case DN: x = a + MArray[DN][0]; y = b + MArray[DN][1]; break;
     case LF: x = a + MArray[LF][0]; y = b + MArray[LF][1]; break;
     case RG: x = a + MArray[RG][0]; y = b + MArray[RG][1]; break;
+    default: assert(false);
   }
   if (x < 0 || y < 0 || x >= 4 || y >= 4) return;
   if (game.board[x][y] & WMASK) return;
@@ -72,17 +75,18 @@ m:return -1.;
 
 ostream& operator<<(ostream& out, const Game& game){
   for (int i =0; i < SIZE; ++i){
-    cout << "|";
+    out << "|";
     for (int j = 0; j < SIZE; ++j){
-      if (game.board[i][j] & WMASK)      cout << "W";
-      else if (game.board[i][j] & HMASK) cout << "H";
-      else if (game.board[i][j] & GMASK) cout << "G";
-      else                               cout << " ";
-      if (game.board[i][j] & PMASK) cout << "+";
-      else                          cout << " ";
+      if (game.board[i][j] & WMASK)      out << "W";
+      else if (game.board[i][j] & HMASK) out << "H";
+      else if (game.board[i][j] & GMASK) out << "G";
+      else                               out << " ";
+      if (game.board[i][j] & PMASK) out << "+";
+      else                          out << " ";
     }
-    cout << "|" << endl;
+    out << "|" << endl;
   }
+  return out;
 }
 
 MatrixXd to_mtx(const Game& game){
@@ -102,7 +106,6 @@ using NN = FFN<MSE, ReluFun, L2Reg, AdagradUpdate, false>;
 void train(NN& model){
   uniform_real_distribution<double> random_step(0., 1.);
   uniform_int_distribution<int> random_choice(0, 3);
-  default_random_engine eng(time(0));
 
   int epochs = 1000;
   double gamma = 0.9;
@@ -112,22 +115,23 @@ void train(NN& model){
     Game game = create_game1();
     cout << "game " << k << endl;
     int step_count = 0;
-    while (true){
+    double reward = -1.;
+    while (reward == -1.){
       step_count++;
 
       MatrixXd X = to_mtx(game);
       MatrixXd O = model.predict(X);
 
       int action = 0;
-      if (random_step(eng) < epsilon){
-        action = random_choice(eng);
+      if (random_step(get_default_random_engine()) < epsilon){
+        action = random_choice(get_default_random_engine());
       } else {
         MatrixXd::Index idx;
         O.row(0).maxCoeff(&idx);
         action = idx;
       }
       make_move(game, (Move)action);
-      double reward = get_reward(game);
+      reward = get_reward(game);
       MatrixXd Xn = to_mtx(game);
       MatrixXd On = model.predict(Xn);
       double maxQ = On.maxCoeff();
@@ -137,12 +141,10 @@ void train(NN& model){
       else               update = reward;
       Y(0, action) = update;
       model.train(X, Y);
-      if (reward != -1.)
-        break;
     }
-    if (epsilon > -.1) epsilon -= 1 / epochs;
+    if (epsilon > .1) epsilon -= 1 / epochs;
 
-    cout << "steps: " << step_count << endl;
+    cout << "steps: " << step_count << " reward: " << reward << endl;
   }
 }
 

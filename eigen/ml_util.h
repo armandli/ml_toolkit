@@ -8,6 +8,11 @@
 
 using namespace std;
 
+default_random_engine& get_default_random_engine(){
+  static default_random_engine eng(time(0));
+  return eng;
+}
+
 template <typename T>
 struct CatStat {
   map<T, size_t> types;

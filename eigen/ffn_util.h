@@ -6,6 +6,8 @@
 #include <random>
 #include <Eigen/Dense>
 
+#include <ml_util.h>
+
 using namespace std;
 using Eigen::MatrixXd;
 
@@ -16,7 +18,7 @@ enum MatrixDim {
 
 MatrixXd random_matrix(int rows, int cols){
   normal_distribution<double> dist(0.0, 0.5);
-  default_random_engine eng(time(0));
+  default_random_engine& eng = get_default_random_engine();
   MatrixXd ret(rows, cols);
 
   ret = ret.unaryExpr([&dist, &eng](double){ return dist(eng); });

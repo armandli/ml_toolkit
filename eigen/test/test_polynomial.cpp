@@ -34,11 +34,10 @@ struct ReadPolynomial {
   }
   void genXY(){
     uniform_int_distribution<int> dist(0, values.size() - 1);
-    default_random_engine eng(time(0));
     set<int> test_rows;
 
     while (test_rows.size() < values.size() / 5)
-      test_rows.insert(dist(eng));
+      test_rows.insert(dist(get_default_random_engine()));
 
     const int C = 5;
     const int trainR = values.size() - test_rows.size();
