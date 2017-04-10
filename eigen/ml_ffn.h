@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <algorithm>
+#include <iostream>
 #include <fstream>
 
 #include <Eigen/Dense>
@@ -27,7 +28,7 @@ class FFN1 {
     cost.classification(O);
     return O;
   }
-  double compute_loss(const MatrixXd& O, const MatrixXd& Y, int icount){
+  double compute_loss(const MatrixXd& O, const MatrixXd& Y, size_t icount){
     double data_loss, reg_loss;
 
     data_loss = cost.loss(O, Y);
@@ -58,7 +59,7 @@ public:
     regularization_rate(regularization_rate), iterations(iterations), display_loss(display_loss){}
 
   double train(const MatrixXd& X, const MatrixXd& Y){
-    for (int k = 0; k < iterations; ++k){
+    for (size_t k = 0; k < iterations; ++k){
       MatrixXd dW;
 
       MatrixXd O = feed_forward(X);
@@ -119,7 +120,7 @@ class FFN {
     activation.function(H1);
     apply_dropout(H1);
     Hs.push_back(H1);
-    for (int i = 1; i < Ws.size() - 1; ++i){
+    for (size_t i = 1; i < Ws.size() - 1; ++i){
       MatrixXd H = Hs.back() * Ws[i];
       activation.function(H);
       apply_dropout(H);
@@ -136,7 +137,7 @@ class FFN {
     MatrixXd H1 = X * Ws.front();
     activation.function(H1);
     Hs.push_back(H1);
-    for (int i = 1; i < Ws.size() - 1; ++i){
+    for (size_t i = 1; i < Ws.size() - 1; ++i){
       MatrixXd H = Hs.back() * Ws[i];
       activation.function(H);
       Hs.push_back(H);
@@ -151,7 +152,7 @@ class FFN {
 
     data_loss = cost.loss(O, Y);
     
-    for (int i = 0; i < Ws.size(); ++i)
+    for (size_t i = 0; i < Ws.size(); ++i)
       reg_loss += regularization.loss(Ws[i], regularization_rate);
 
     if (display_loss && icount % (iterations / 100) == 0)
@@ -201,7 +202,7 @@ public:
     }
   }
   double train(const MatrixXd& X, const MatrixXd& Y){
-    for (int k = 0; k < iterations; ++k){
+    for (size_t k = 0; k < iterations; ++k){
       vector<MatrixXd> dWs;
 
       MatrixXd O = IsDropout ? dropout(X) : feed_forward(X);
