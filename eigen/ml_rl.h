@@ -78,9 +78,10 @@ public:
     game(game), model(model), gamma(g)
   {}
 
-  void train(size_t epoch, size_t report_frequency = 10, size_t batchsize = 200, double epsilon = 1.){
+  void train(size_t epoch, size_t report_frequency = 10, size_t batchsize = 300){
     int iDim = game.get_input_dimension();
     int oDim = game.get_output_dimension();
+    double epsilon = 1.;
     Experience exp(iDim, oDim, batchsize);
 
     for (size_t k = 0; k < epoch; ++k){
@@ -113,7 +114,10 @@ public:
       }
       if (epsilon > .1) epsilon -= 1 / epoch;
 
-      if (k % report_frequency == 0) game.report_stat(cout);
+      if (k % report_frequency == 0){
+        cout << "epoch: " << k << ": ";
+        game.report_stat(cout);
+      }
     }
   }
 };

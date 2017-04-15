@@ -103,7 +103,7 @@ public:
 template <typename Cost, typename Activation, typename Regularization, typename ParamUpdate, bool IsDropout>
 class FFN {
   vector<MatrixXd> Ws;
-  vector<MatrixXd> Hs;
+  vector<MatrixXd> Hs; //TODO: this does not need to be here
   vector<ParamUpdate> updaters;
   Cost cost;
   Activation activation;
