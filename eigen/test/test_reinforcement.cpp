@@ -69,6 +69,7 @@ public:
         ret(0, i * GridSize + j + GridSize * GridSize * 2) = board[i][j] & HMASK ? 1. : 0.;
         ret(0, i * GridSize + j + GridSize * GridSize * 3) = board[i][j] & GMASK ? 1. : 0.;
       }
+    cout << ret << endl; //gothere
     return ret;
   }
 

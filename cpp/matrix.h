@@ -3,9 +3,11 @@
 
 #include <cstddef>
 #include <cassert>
+#include <ctime>
 #include <cstring>
 #include <cmath>
 #include <vector>
+#include <random>
 #include <iostream>
 #include <fstream>
 using namespace std;
@@ -16,6 +18,11 @@ using namespace std;
   for (size_t ic = cb; ic < ce; ++ic) for (size_t ir = rb; ir < re; ++ir)
 #define D2IterR(ir, ic, rb, re, cb, ce) \
   for (size_t ir = rb; ir < re; ++ir) for (size_t ic = cb; ic < ce; ++ic)
+
+default_random_engine& get_default_random_engine(){
+  static default_random_engine eng(time(0));
+  return eng;
+}
 
 const unsigned long long PTR_MASK = 0xFFFFFFFFFFFFFFFEUL;
 const unsigned STRIDE = 32 * 1024; //TODO
@@ -87,22 +94,18 @@ public:
   Mtx(size_t r, size_t c, T s = 0): mData(nullptr), mRows(r), mCols(c) {
     mData = new T[r * c];
 
-    if ((size_t)mData & 0x1) cout << "wow!" << endl; //gothere
-
     D1Iter(i, 0, r * c) mData[i] = s;
   }
   //NOTE: vector<T> is a vector of columns
   Mtx(size_t r, size_t c, const vector<T>& data): mData(nullptr), mRows(r), mCols(c) {
     assert(data.size() == r * c);
     mData = new T[r * c];
-    if ((size_t)mData & 0x1) cout << "wow!" << endl; //gothere
     memcpy(mData, data.data(), sizeof(T) * r * c);
   }
   Mtx(const Mtx& o): mData(nullptr), mRows(o.mRows), mCols(o.mCols) {
     T* optr = o.dataptr();
     if (not optr) return;
     mData = new T[rows() * cols()];
-    if ((size_t)mData & 0x1) cout << "wow!" << endl; //gothere
     memcpy(dataptr(), optr, sizeof(T) * rows() * cols());
     if (o.is_rotated())
       flip_bit();
@@ -120,7 +123,6 @@ public:
     if (data) delete[] data;
 
     mData = new T[o.rows() * o.cols()];
-    if ((size_t)mData & 0x1) cout << "wow!" << endl; //gothere
     mRows = o.rows();
     mCols = o.cols();
     memcpy(mData, odata, sizeof(T) * rows() * cols());
@@ -135,7 +137,6 @@ public:
     if (data) delete[] data;
 
     mData = o.mData;
-    if ((size_t)mData & 0x1) cout << "wow!" << endl; //gothere
     mRows = o.mRows;
     mCols = o.mCols;
 
@@ -440,6 +441,18 @@ public:
     }
 
     out.close();
+  }
+
+  /* generate a random matrix */
+  static Mtx random(size_t rows, size_t cols){
+    Mtx ret(rows, cols, 0.);
+    normal_distribution<double> dist(0., 0.5);
+    default_random_engine& engine = get_default_random_engine();
+
+    ret.foreach([&](double& d){
+        d = dist(engine);
+    });
+    return ret;
   }
 };
 
