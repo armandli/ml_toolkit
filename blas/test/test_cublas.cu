@@ -77,7 +77,22 @@ void random_matrix(Mtx& m){
 }
 
 void generate_sample(Mtx& a, Mtx& b){
-  //TODO
+  assert(a.is_cuda == false && b.is_cuda == false);
+  for (size_t i = 0; i < a.rows * a.cols; ++i)
+    a.data[i] = (double)i;
+  for (size_t i = 0; i < b.rows * b.cols; ++i)
+    b.data[i] = (double)i;
+}
+
+clock_t matrix_multiply(Mtx& c, Mtx& a, Mtx& b){
+  for (size_t i = 0; i < c.rows; ++i)
+    for (size_t j = 0; j < c.cols; ++j){
+      c.data[i * c.cols + j] = 0.;
+      for (size_t k = 0; k < a.cols; ++k)
+        c.data[i * c.cols + j] += a.data[i * a.cols + k] * b.data[k * b.cols + j];
+    }
+
+  return clock();
 }
 
 void mmul_cublas(Mtx& c, Mtx& a, Mtx& b){
@@ -97,11 +112,13 @@ void mmul_cublas(Mtx& c, Mtx& a, Mtx& b){
 }
 
 int main(){
-  Mtx a(false, SZ, SZ), b(false, SZ, SZ), c(false, SZ, SZ);
+  Mtx a(false, SZ, SZ), b(false, SZ, SZ), c(false, SZ, SZ), d(false, SZ, SZ);
   Mtx da(true, SZ, SZ), db(true, SZ, SZ), dc(true, SZ, SZ);
 
-  random_matrix(a);
-  random_matrix(b);
+  generate_sample(a, b);
+
+//  random_matrix(a);
+//  random_matrix(b);
 
   clock_t timing_start = clock();
   cudaMemcpy(da.data, a.data, sizeof(double) * a.rows * a.cols, cudaMemcpyHostToDevice);
@@ -112,5 +129,16 @@ int main(){
   cudaMemcpy(c.data, dc.data, sizeof(double) * c.rows * c.cols, cudaMemcpyDeviceToHost);
   cout << "Time: " << (clock() - timing_start) * (double)(CLOCKS_PER_SEC / 1000) << " ms" << endl;
 
-  cout << c;
+  timing_start = clock();
+  clock_t timing_end = matrix_multiply(d, a, b);
+
+  bool is_same = true;
+  for (size_t i = 0; i < c.rows; ++i)
+    for (size_t j = 0; j < c.cols; ++j)
+      if (c.data[i] != d.data[i]){
+        cout << "Result Unequal" << endl;
+        is_same = false;
+        break;
+      }
+  if (is_same) cout << "Result equal" << endl;
 }
