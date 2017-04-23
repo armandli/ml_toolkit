@@ -16,7 +16,7 @@ inline void gpu_assert(cudaError_t code, const char *file, int line, bool abort=
    }   
 }
 
-#define BSZ 64
+#define BSZ 128
 #define TSZ 16
 #define SZ (BSZ * TSZ)
 
@@ -127,7 +127,7 @@ int main(){
   mmul_cublas(dc, da, db);
 
   cudaMemcpy(c.data, dc.data, sizeof(double) * c.rows * c.cols, cudaMemcpyDeviceToHost);
-  cout << "Time: " << (clock() - timing_start) * (double)(CLOCKS_PER_SEC / 1000) << " ms" << endl;
+  cout << "Time: " << (clock() - timing_start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << endl;
 
   timing_start = clock();
   clock_t timing_end = matrix_multiply(d, a, b);
