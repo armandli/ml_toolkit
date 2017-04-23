@@ -33,7 +33,6 @@ public:
     board1[2][2] ^= WMASK;
     board1[1][1] ^= HMASK;
     board1[3][3] ^= GMASK;
-//    board1[0][1] ^= PMASK;
 
     bool not_found = true;
     uniform_int_distribution<int> dist(0, GridSize - 1);
@@ -69,7 +68,6 @@ public:
         ret(0, i * GridSize + j + GridSize * GridSize * 2) = board[i][j] & HMASK ? 1. : 0.;
         ret(0, i * GridSize + j + GridSize * GridSize * 3) = board[i][j] & GMASK ? 1. : 0.;
       }
-    cout << ret << endl; //gothere
     return ret;
   }
 
@@ -131,7 +129,7 @@ m:  switch (move){
         }
 m:  if (board_equal) return -9.;
 
-    return (abs(px - gx) + abs(py - gy)) * -1.;
+    return (max(px, gx) - min(px, gx) + (max(py, gy) - min(py, gy))) * -1.;
   }
 
   virtual bool is_terminal_state() final {

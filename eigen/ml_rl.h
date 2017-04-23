@@ -78,7 +78,7 @@ public:
     game(game), model(model), gamma(g)
   {}
 
-  void train(size_t epoch, size_t batchsize = 300, size_t report_frequency = 1){
+  void train(size_t epoch, size_t batchsize = 300, size_t report_frequency = 10){
     int iDim = game.get_input_dimension();
     int oDim = game.get_output_dimension();
     double epsilon = 1.;
