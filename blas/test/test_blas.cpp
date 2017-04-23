@@ -125,8 +125,8 @@ int main(){
   bool is_same = true;
   for (size_t i = 0; i < c.rows; ++i)
     for (size_t j = 0; j < c.cols; ++j)
-      if (c.data[i * c.cols + j] != d.data[i * d.cols + j]){
-        cout << "Result Unequal by " << (c.data[i * c.cols + j] - d.data[i * d.cols + j]) << endl;
+      if (fabs(c.data[i * c.cols + j] - d.data[i * d.cols + j]) / d.data[i * d.cols + j] > 0.0001){
+        cout << "Result Unequal by " << (c.data[i * c.cols + j] - d.data[i * d.cols + j]) << " at " << i << " " << j << endl;
         is_same = false;
         goto m;
       }
