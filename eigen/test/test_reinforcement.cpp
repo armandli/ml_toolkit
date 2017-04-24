@@ -193,7 +193,6 @@ void play(Model& model){
     int action = (int)idx;
     game.make_move(action);
     reward = game.get_reward();
-    cout << "move: " << action << endl;
     cout << game << endl;
   }
 }
