@@ -7,7 +7,7 @@ using namespace std;
 
 using Eigen::MatrixXd;
 
-#define SZ 32
+#define SZ 2048
 
 int main(){
   MatrixXd a = MatrixXd::Random(SZ, SZ);

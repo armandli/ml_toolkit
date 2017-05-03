@@ -5,7 +5,7 @@
 
 using namespace std;
 
-#define SZ 32
+#define SZ 2048
 using tt = double;
 
 int main(){

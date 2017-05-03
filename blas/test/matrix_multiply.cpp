@@ -6,7 +6,7 @@
 using namespace std;
 using namespace ML;
 
-#define SZ 32
+#define SZ 2048
 
 int main(){
   Mtx a = Mtx::random(SZ, SZ);

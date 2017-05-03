@@ -1,4 +1,5 @@
 #include <vector>
+#include <fstream>
 
 #include <gtest/gtest.h>
 
@@ -143,6 +144,35 @@ TEST_F(ArithTest, ComplexExpression){
       EXPECT_DOUBLE_EQ(res[i * 2 + j], k(i, j));
 }
 
+TEST_F(ArithTest, Transpose){
+  vector<double> res = {2.,4.,3.,5.};
+
+  b.transpose();
+
+  for (size_t i = 0; i < 2; ++i)
+    for (size_t j = 0; j < 2; ++j)
+      EXPECT_DOUBLE_EQ(res[i * 2 + j], b(i, j));
+
+  vector<double> reg = {22.,23.,24.,25.,26.,27.};
+
+  f.transpose();
+
+  for (size_t i = 0; i < 6; ++i)
+    EXPECT_DOUBLE_EQ(reg[i], f(i, 0));
+
+  vector<double> ref = {11.,13.,15.,12.,14.,16.};
+
+  cout << c << endl;
+
+  c.transpose();
+
+  for (size_t i = 0; i < 2; ++i)
+    for (size_t j = 0; j < 3; ++j)
+      EXPECT_DOUBLE_EQ(ref[i * 3 + j], c(i, j));
+  
+  cout << c << endl;
+}
+
 TEST(BlockCopyTest, BlockCopyTest){
   vector<double> va = {1.,2.,3.,4.};
   vector<double> vb = {2.,3.,4.,5.};
@@ -167,5 +197,14 @@ TEST(BlockCopyTest, BlockCopyTest){
       EXPECT_DOUBLE_EQ(res[i * 4 + j], a(i, j));
 }
 
-struct SaveLoadTest : ::testing::Test {
-};
+TEST(SaveLoadTest, SaveLoadTest){
+  Mtx m = Mtx::random(16, 16);
+
+  fstream fout("test_matrix_save.sav", fstream::out );
+  m.save(fout);
+
+//  fstream fin("test_matrix_save.sav", fstream::in );
+//  Mtx n(fin);
+
+//  EXPECT_EQ(m, n);
+}

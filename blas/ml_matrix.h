@@ -108,11 +108,11 @@ public:
 
 class Mtx {
   double* mData;
+  size_t  mRows;
+  size_t  mCols;
 #ifdef __NVCC__
   double* mCada;
 #endif
-  size_t  mRows;
-  size_t  mCols;
 
 public:
   Mtx(): mData(nullptr), mRows(0), mCols(0) {}
@@ -126,6 +126,7 @@ public:
     mRows = r;
     mCols = c;
     mData = new double[r * c];
+    //TODO: wrong
     for (size_t i = 0; i < r * c; ++i){
       std::string bytes;
       in >> bytes;
@@ -254,6 +255,11 @@ public:
 
   /* transpose */
   void transpose(){
+    mRows ^= mCols;
+    mCols ^= mRows;
+    mRows ^= mCols;
+
+    //this is a columar matrix based transpose algorithm
     std::vector<bool> visited(rows() * cols(), false);
     for (size_t i = 0; i < cols(); ++i)
       for (size_t j = 0; j < rows(); ++j){
@@ -275,7 +281,7 @@ public:
         }
         mData[dest] = valence;
         visited[dest] = true;
-      }   
+      }
   }
 
   /* statistics operations */
@@ -372,12 +378,12 @@ public:
   /* save */
   std::ostream& save(std::ostream& out) const {
     assert(mData != nullptr);
-    out << rows() << " " << cols();
+    out << rows() << " " << cols() << " ";
     std::for_each(mData, &mData[rows() * cols()], [&out](double& v){
-        unsigned char bytes[sizeof(double) + 1];
+        char bytes[sizeof(double) + 1];
         memcpy(bytes, &v, sizeof(double));
         bytes[sizeof(double)] = 0;
-        out << " " << bytes;
+        out << bytes;
     });
     return out;
   }
