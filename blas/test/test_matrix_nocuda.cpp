@@ -1,3 +1,4 @@
+#include <cmath>
 #include <vector>
 #include <fstream>
 
@@ -162,15 +163,151 @@ TEST_F(ArithTest, Transpose){
 
   vector<double> ref = {11.,13.,15.,12.,14.,16.};
 
-  cout << c << endl;
-
   c.transpose();
 
   for (size_t i = 0; i < 2; ++i)
     for (size_t j = 0; j < 3; ++j)
       EXPECT_DOUBLE_EQ(ref[i * 3 + j], c(i, j));
-  
-  cout << c << endl;
+}
+
+struct StatTest : ::testing::Test {
+  StatTest(){
+    vector<double> va = {10., 14., 12., 17., 1., 9.876, 9.877, 17.01, 16.98, 16.99, 15.5, 15.4};
+    vector<double> vb = {5.,  4.,  6.,  18., 4., 2.,    3.,    3.,    2.,    9.,    2.,   2.  };
+    vector<double> vc = {5.,nan(""),6., 18., 4., 2.,  nan(""), 3.,    2.,    9.,    2.,   nan("")};
+
+    a = Mtx(3, 4, va);
+    b = Mtx(4, 3, vb);
+    c = Mtx(4, 3, vc);
+  }
+
+  Mtx a, b, c;
+};
+
+TEST_F(StatTest, MaxCoeff){
+  vector<DimV> mra = a.max_coeff(MRow);
+  vector<DimV> mca = a.max_coeff(MCol);
+  vector<DimV> ma  = a.max_coeff(MAll);
+
+  vector<DimV> mrb = b.max_coeff(MRow);
+  vector<DimV> mcb = b.max_coeff(MCol);
+  vector<DimV> mb  = b.max_coeff(MAll);
+
+  vector<DimV> mrc = c.max_coeff(MRow);
+  vector<DimV> mcc = c.max_coeff(MCol);
+  vector<DimV> mc  = c.max_coeff(MAll);
+
+  EXPECT_DOUBLE_EQ(17.01, ma[0].val);
+  EXPECT_DOUBLE_EQ(18., mb[0].val);
+  EXPECT_DOUBLE_EQ(18., mc[0].val);
+
+  EXPECT_EQ(3, mra[0].idx);
+  EXPECT_EQ(3, mra[1].idx);
+  EXPECT_EQ(1, mra[2].idx);
+
+  EXPECT_EQ(2, mca[0].idx);
+  EXPECT_EQ(2, mca[1].idx);
+  EXPECT_EQ(2, mca[2].idx);
+  EXPECT_EQ(1, mca[3].idx);
+
+  EXPECT_EQ(2, mrc[0].idx);
+  EXPECT_EQ(0, mrc[1].idx);
+  EXPECT_EQ(1, mrc[2].idx);
+  EXPECT_EQ(0, mrc[3].idx);
+
+  EXPECT_EQ(1, mcc[0].idx);
+  EXPECT_EQ(1, mcc[1].idx);
+  EXPECT_EQ(0, mcc[2].idx);
+}
+
+TEST_F(StatTest, MinCoeff){
+  vector<DimV> mra = a.min_coeff(MRow);
+  vector<DimV> mca = a.min_coeff(MCol);
+  vector<DimV> ma  = a.min_coeff(MAll);
+
+  vector<DimV> mrb = b.min_coeff(MRow);
+  vector<DimV> mcb = b.min_coeff(MCol);
+  vector<DimV> mb  = b.min_coeff(MAll);
+
+  vector<DimV> mrc = c.min_coeff(MRow);
+  vector<DimV> mcc = c.min_coeff(MCol);
+  vector<DimV> mc  = c.min_coeff(MAll);
+
+  EXPECT_DOUBLE_EQ(1., ma[0].val);
+  EXPECT_DOUBLE_EQ(2., mb[0].val);
+  EXPECT_DOUBLE_EQ(2., mc[0].val);
+
+  EXPECT_EQ(0, mra[0].idx);
+  EXPECT_EQ(0, mra[1].idx);
+  EXPECT_EQ(3, mra[2].idx);
+
+  EXPECT_EQ(1, mca[0].idx);
+  EXPECT_EQ(1, mca[1].idx);
+  EXPECT_EQ(1, mca[2].idx);
+  EXPECT_EQ(2, mca[3].idx);
+
+  EXPECT_EQ(0, mrc[0].idx);
+  EXPECT_EQ(2, mrc[1].idx);
+  EXPECT_EQ(2, mrc[2].idx);
+  EXPECT_EQ(1, mrc[3].idx);
+
+  EXPECT_EQ(0, mcc[0].idx);
+  EXPECT_EQ(3, mcc[1].idx);
+  EXPECT_EQ(1, mcc[2].idx);
+}
+
+TEST_F(StatTest, Sum){
+  vector<double> mra = a.sum(MRow);
+  vector<double> mca = a.sum(MCol);
+  vector<double> ma  = a.sum(MAll);
+
+  vector<double> mrb = b.sum(MRow);
+  vector<double> mcb = b.sum(MCol);
+  vector<double> mb  = b.sum(MAll);
+
+  vector<double> mrc = c.sum(MRow);
+  vector<double> mcc = c.sum(MCol);
+  vector<double> mc  = c.sum(MAll);
+
+  EXPECT_DOUBLE_EQ(155.633, ma[0]);
+  EXPECT_DOUBLE_EQ(60., mb[0]);
+  EXPECT_DOUBLE_EQ(51., mc[0]);
+}
+
+TEST_F(StatTest, Mean){
+  vector<double> mra = a.mean(MRow);
+  vector<double> mca = a.mean(MCol);
+  vector<double> ma  = a.mean(MAll);
+
+  vector<double> mrb = b.mean(MRow);
+  vector<double> mcb = b.mean(MCol);
+  vector<double> mb  = b.mean(MAll);
+
+  vector<double> mrc = c.mean(MRow);
+  vector<double> mcc = c.mean(MCol);
+  vector<double> mc  = c.mean(MAll);
+
+  EXPECT_DOUBLE_EQ(13.25, mra[0]);
+  EXPECT_DOUBLE_EQ(9.44075, mra[1]);
+  EXPECT_DOUBLE_EQ(16.2175, mra[2]);
+
+  EXPECT_DOUBLE_EQ(9.326666666666666, mca[0]);
+  EXPECT_DOUBLE_EQ(13.622, mca[1]);
+  EXPECT_DOUBLE_EQ(12.459, mca[2]);
+  EXPECT_DOUBLE_EQ(16.47, mca[3]);
+
+  EXPECT_DOUBLE_EQ(12.969416666666667, ma[0]);
+
+  EXPECT_DOUBLE_EQ(5.5, mrc[0]);
+  EXPECT_DOUBLE_EQ(8., mrc[1]);
+  EXPECT_DOUBLE_EQ(2.5, mrc[2]);
+  EXPECT_DOUBLE_EQ(5.5, mrc[3]);
+
+  EXPECT_DOUBLE_EQ(10.666666666666666, mcc[0]);
+  EXPECT_DOUBLE_EQ(3., mcc[1]);
+  EXPECT_DOUBLE_EQ(3.3333333333333333, mcc[2]);
+
+  EXPECT_DOUBLE_EQ(5.6666666666666667, mc[0]);
 }
 
 TEST(BlockCopyTest, BlockCopyTest){
@@ -203,8 +340,8 @@ TEST(SaveLoadTest, SaveLoadTest){
   fstream fout("test_matrix_save.sav", fstream::out );
   m.save(fout);
 
-//  fstream fin("test_matrix_save.sav", fstream::in );
-//  Mtx n(fin);
+  fstream fin("test_matrix_save.sav", fstream::in );
+  Mtx n(fin);
 
-//  EXPECT_EQ(m, n);
+  EXPECT_EQ(m, n);
 }

@@ -2,10 +2,8 @@
 #define ML_MATRIX
 
 //TODO: make matrix NaN safe
-//TODO: SubMtx copy may expand as a grid against the other or taking a segment of the other?
 //TODO: add cublas usages
-//TODO: add sum of entire matrix
-//TODO: add print of SubMtx
+//TODO: write delayed element-wise evaluation so to avoid unnecessary copying operation in long expressions
 
 #include <cassert>
 #include <cmath>
@@ -17,6 +15,7 @@
 #include <numeric>
 #include <algorithm>
 #include <iostream>
+#include <fstream>
 
 #include <cblas.h>
 
@@ -42,6 +41,7 @@ namespace ML {
 enum MtxDim {
   MCol,
   MRow,
+  MAll,
 };
 
 struct DimV {
@@ -51,8 +51,10 @@ struct DimV {
 
 #define D1Iter(i, ib, ie) \
   for (size_t i = (ib); i < (ie); ++i)
+
 #define D2IterR(ir, ic, rb, re, cb, ce) \
   for (size_t ir = (rb); ir < (re); ++ir) for (size_t ic = (cb); ic < (ce); ++ic) 
+
 #define D2Idx(pt, ir, ic, rs, cs) \
   (pt)[(ir) * (cs) + (ic)]
 
@@ -60,27 +62,27 @@ class SubMtx {
   double* mData;
   size_t  mRows;
   size_t  mCols;
-  size_t  mSlide;
+  size_t  mStride;
 
 public:
   size_t rows() const { return mRows; }
   size_t cols() const { return mCols; }
 
   SubMtx(double* data, size_t r, size_t c, size_t s):
-    mData(data), mRows(r), mCols(c), mSlide(s){}
+    mData(data), mRows(r), mCols(c), mStride(s){}
   SubMtx(const SubMtx& o){
     assert(rows() == o.rows() && cols() == o.cols());
     assert(mData != nullptr && o.mData != nullptr);
 
     D2IterR(ir, ic, 0, rows(), 0, cols())
-      D2Idx(mData, ir, ic, rows(), mSlide) = D2Idx(o.mData, ir, ic, o.rows(), o.mSlide);
+      D2Idx(mData, ir, ic, rows(), mStride) = D2Idx(o.mData, ir, ic, o.rows(), o.mStride);
   }
   SubMtx(SubMtx&& o){
     assert(rows() == o.rows() && cols() == o.cols());
     assert(mData != nullptr && o.mData != nullptr);
 
     D2IterR(ir, ic, 0, rows(), 0, cols())
-      D2Idx(mData, ir, ic, rows(), mSlide) = D2Idx(o.mData, ir, ic, o.rows(), o.mSlide);
+      D2Idx(mData, ir, ic, rows(), mStride) = D2Idx(o.mData, ir, ic, o.rows(), o.mStride);
   }
   ~SubMtx() = default;
 
@@ -91,7 +93,7 @@ public:
     assert(mData != nullptr && o.mData != nullptr);
 
     D2IterR(ir, ic, 0, rows(), 0, cols())
-      D2Idx(mData, ir, ic, rows(), mSlide) = D2Idx(o.mData, ir, ic, o.rows(), o.mSlide);
+      D2Idx(mData, ir, ic, rows(), mStride) = D2Idx(o.mData, ir, ic, o.rows(), o.mStride);
     return *this;
   }
   SubMtx& operator=(SubMtx&& o){
@@ -101,10 +103,28 @@ public:
     assert(mData != nullptr && o.mData != nullptr);
 
     D2IterR(ir, ic, 0, rows(), 0, cols())
-      D2Idx(mData, ir, ic, rows(), mSlide) = D2Idx(o.mData, ir, ic, o.rows(), o.mSlide);
+      D2Idx(mData, ir, ic, rows(), mStride) = D2Idx(o.mData, ir, ic, o.rows(), o.mStride);
     return *this;
   }
+
+  double operator()(size_t i, size_t j) const {
+    assert(i < rows() && j < cols());
+
+    return D2Idx(mData, i, j, 1, mStride);
+  }
 };
+
+std::ostream& operator << (std::ostream& out, const SubMtx& m){
+  for (size_t i = 0; i < m.rows(); ++i){
+    bool is_first = true;
+    for (size_t j = 0; j < m.cols(); ++j){
+      if (is_first) is_first = false;
+      else          out << " ";
+      out << m(i, j);
+    }
+  }
+  return out;
+}
 
 class Mtx {
   double* mData;
@@ -112,8 +132,22 @@ class Mtx {
   size_t  mCols;
 #ifdef __NVCC__
   double* mCada;
+  bool    mDataDirty;
 #endif
 
+  /* load matrix from fstream */
+  void load(std::istream& in){
+    assert(in.good());
+
+    in.read((char*)&mRows, sizeof(size_t));
+    in.read((char*)&mCols, sizeof(size_t));
+
+    assert(mRows > 0 && mCols > 0);
+
+    mData = new double[mRows * mCols];
+
+    in.read((char*)mData, sizeof(double) * mRows * mCols);
+  }
 public:
   Mtx(): mData(nullptr), mRows(0), mCols(0) {}
   Mtx(size_t r, size_t c, double def = 0.):
@@ -122,17 +156,13 @@ public:
       mData[i] = def;
   }
   explicit Mtx(std::istream& in) {
-    size_t r, c; in >> r >> c;
-    mRows = r;
-    mCols = c;
-    mData = new double[r * c];
-    //TODO: wrong
-    for (size_t i = 0; i < r * c; ++i){
-      std::string bytes;
-      in >> bytes;
-      assert(bytes.length() == sizeof(double));
-      memcpy(&mData[i], bytes.c_str(), sizeof(double));
-    }
+    load(in);
+  }
+  explicit Mtx(const char* filename){
+    std::ifstream in(filename, std::ifstream::in);
+    assert(in.good());
+    load(in);
+    in.close();
   }
   Mtx(size_t r, size_t c, const std::vector<double>& data):
     mData(new double[r * c]), mRows(r), mCols(c) {
@@ -254,7 +284,7 @@ public:
   }
 
   /* transpose */
-  void transpose(){
+  Mtx& transpose(){
     mRows ^= mCols;
     mCols ^= mRows;
     mRows ^= mCols;
@@ -282,110 +312,177 @@ public:
         mData[dest] = valence;
         visited[dest] = true;
       }
+    return *this;
   }
 
   /* statistics operations */
   std::vector<DimV> max_coeff(MtxDim dim){
+    struct comparator_ {
+      bool operator()(double a, double b){
+        return a < b ? true : std::isnan(a);
+      }
+    } comparator;
     std::vector<DimV> ret;
     switch (dim){
     case MRow: {
       ret.reserve(rows());
       for (size_t ir = 0; ir < rows(); ++ir){
-        double* vmax = std::max_element(&mData[ir * cols()], &mData[(ir + 1) * cols()]);
-        size_t dist  = std::distance(&mData[ir * cols()], vmax);
-        ret.emplace_back((DimV){dist, *vmax});
+        double* vmax = std::max_element(&D2Idx(mData, ir, 0, rows(), cols()), &D2Idx(mData, (ir + 1), 0, rows(), cols()), comparator);
+        size_t dist = std::distance(&D2Idx(mData, ir, 0, rows(), cols()), vmax);
+        if (std::isnan(*vmax)) ret.emplace_back((DimV){std::numeric_limits<size_t>::max(), nan("")});
+        else                   ret.emplace_back((DimV){dist, *vmax});
       }
     } break; //mRow
     case MCol: {
       ret.reserve(cols());
       for (size_t ic = 0; ic < cols(); ++ic){
-        size_t dist = 0;
-        double vmax = std::numeric_limits<double>::min(), tmp;
+        size_t dist = std::numeric_limits<size_t>::max();
+        double vmax = std::numeric_limits<double>::min();
         for (size_t ir = 0; ir < rows(); ++ir)
-          if ((tmp = D2Idx(mData, ir, ic, rows(), cols())) > vmax){
-            vmax = tmp;
+          if (not std::isnan(D2Idx(mData, ir, ic, rows(), cols())) &&
+              D2Idx(mData, ir, ic, rows(), cols()) > vmax){
+            vmax = D2Idx(mData, ir, ic, rows(), cols());
             dist = ir;
           }
-        ret.emplace_back((DimV){dist, vmax});
+        if (dist == std::numeric_limits<size_t>::max()) ret.emplace_back((DimV){dist, nan("")});
+        else                                            ret.emplace_back((DimV){dist, vmax});
       }
     } break; //mCol
+    case MAll: {
+      double* vmax = std::max_element(mData, &mData[rows() * cols()], comparator);
+      size_t  dist = std::distance(mData, vmax);
+      if (std::isnan(*vmax)) ret.emplace_back((DimV){std::numeric_limits<size_t>::max(), nan("")});
+      else                   ret.emplace_back((DimV){dist, *vmax});
+    } break; //mAll
     default: assert(false);
     } //switch
     return ret;
   }
   std::vector<DimV> min_coeff(MtxDim dim){
+    struct comparator_ {
+      bool operator()(double a, double b){
+        return a < b ? true : std::isnan(b);
+      }
+    } comparator;
     std::vector<DimV> ret;
     switch (dim){
     case MRow: {
       ret.reserve(rows());
       for (size_t ir = 0; ir < rows(); ++ir){
-        double* vmax = std::min_element(&mData[ir * cols()], &mData[(ir + 1) * cols()]);
-        size_t dist  = std::distance(&mData[ir * cols()], vmax);
-        ret.emplace_back((DimV){dist, *vmax});
+        double* vmin = std::min_element(&D2Idx(mData, ir, 0, rows(), cols()), &D2Idx(mData, (ir + 1), 0, rows(), cols()), comparator);
+        size_t  dist = std::distance(&D2Idx(mData, ir, 0, rows(), cols()), vmin);
+        if (std::isnan(*vmin)) ret.emplace_back((DimV){std::numeric_limits<size_t>::max(), nan("")});
+        else                   ret.emplace_back((DimV){dist, *vmin});
       }
     } break; //mRow
     case MCol: {
       ret.reserve(cols());
       for (size_t ic = 0; ic < cols(); ++ic){
-        size_t dist = 0;
-        double vmax = std::numeric_limits<double>::max(), tmp;
+        size_t dist = std::numeric_limits<size_t>::max();
+        double vmin = std::numeric_limits<double>::max();
         for (size_t ir = 0; ir < rows(); ++ir)
-          if ((tmp = D2Idx(mData, ir, ic, rows(), cols())) < vmax){
-            vmax = tmp;
+          if (not std::isnan(D2Idx(mData, ir, ic, rows(), cols())) &&
+              D2Idx(mData, ir, ic, rows(), cols()) < vmin){
+            vmin = D2Idx(mData, ir, ic, rows(), cols());
             dist = ir;
           }
-        ret.emplace_back((DimV){dist, vmax});
+        if (dist == std::numeric_limits<size_t>::max()) ret.emplace_back((DimV){dist, nan("")});
+        else                                            ret.emplace_back((DimV){dist, vmin});
       }
     } break; //mCol
+    case MAll: {
+      double* vmin = std::min_element(mData, &mData[rows() * cols()], comparator);
+      size_t  dist = std::distance(mData, vmin);
+      if (std::isnan(*vmin)) ret.emplace_back((DimV){std::numeric_limits<size_t>::max(), nan("")});
+      else                   ret.emplace_back((DimV){dist, *vmin});
+    } break;
     default: assert(false);
     } //switch
     return ret;
   }
   std::vector<double> sum(MtxDim dim){
-    //TODO: how to deal with NaN here properly
+    struct binop_ {
+      double operator()(double a, double b){
+        if (std::isnan(b)) return a;
+        else               return a + b;
+      }
+    } binop;
     std::vector<double> ret;
     switch (dim){
-    case MRow: {
+    case MRow:
       ret.reserve(rows());
       for (size_t ir = 0; ir < rows(); ++ir)
-        ret.emplace_back(std::accumulate(&mData[ir * cols()], &mData[(ir + 1) * cols()], 0.));
-    } break;
+        ret.push_back(std::accumulate(&D2Idx(mData, ir, 0, row(), cols()), &D2Idx(mData, (ir + 1), 0, rows(), cols()), 0., binop));
+    break; //MRow
     case MCol: {
       ret.reserve(cols());
       for (size_t ic = 0; ic < cols(); ++ic){
-        double accu = 0.;
+        double sum = 0.;
         for (size_t ir = 0; ir < rows(); ++ir)
-          accu += D2Idx(mData, ir, ic, rows(), cols());
-        ret.emplace_back(accu);
+          if (not std::isnan(D2Idx(mData, ir, ic, rows(), cols())))
+            sum += D2Idx(mData, ir, ic, rows(), cols());
+        ret.push_back(sum);
       }
-    } break;
+    } break; //MCol
+    case MAll:
+      ret.push_back(std::accumulate(mData, &mData[rows() * cols()], 0., binop));
+    break; //MAll
     default: assert(false);
     } // switch
     return ret;
   }
   std::vector<double> mean(MtxDim dim){
+    struct nan_compare_ {
+      bool operator()(double d){
+        return std::isnan(d);
+      }
+    } nan_compare;
     std::vector<double> sums = sum(dim);
-    double sz;
+    std::vector<double> sizes;
+    sizes.reserve(sums.size());
     switch (dim){
-    case MRow: sz = (double)rows(); break;
-    case MCol: sz = (double)cols(); break;
+    case MRow: {
+      for (size_t ir = 0; ir < rows(); ++ir){
+        size_t na = std::count_if(&D2Idx(mData, ir, 0, rows(), cols()), &D2Idx(mData, (ir + 1), 0, rows(), cols()), nan_compare);
+        sizes.push_back(cols() - na);
+      }
+    } break; //MRow
+    case MCol: {
+      for (size_t ic = 0; ic < cols(); ++ic){
+        size_t na = 0;
+        for (size_t ir = 0; ir < rows(); ++ir)
+          if (std::isnan(D2Idx(mData, ir, ic, rows(), cols())))
+              na++;
+        sizes.push_back(rows() - na);
+      }
+    } break; //MCol
+    case MAll: {
+      size_t na = std::count_if(mData, &mData[rows() * cols()], nan_compare);
+      sizes.push_back(rows() * cols() - na);
+    } break; //MAll
     default: assert(false);
-    } //switch
-    std::for_each(sums.begin(), sums.end(), [sz](double& v){ v /= sz; });
+    }
+
+    for (size_t i = 0; i < sums.size(); ++i)
+      sums[i] /= sizes[i];
     return sums;
   }
 
   /* save */
   std::ostream& save(std::ostream& out) const {
     assert(mData != nullptr);
-    out << rows() << " " << cols() << " ";
-    std::for_each(mData, &mData[rows() * cols()], [&out](double& v){
-        char bytes[sizeof(double) + 1];
-        memcpy(bytes, &v, sizeof(double));
-        bytes[sizeof(double)] = 0;
-        out << bytes;
-    });
+    out.write((char*)&mRows, sizeof(size_t));
+    out.write((char*)&mCols, sizeof(size_t));
+    out.write((char*)mData, sizeof(double) * mRows * mCols);
     return out;
+  }
+  void save(const char* filename){
+    std::ofstream out(filename, std::ofstream::out);
+
+    assert(out.good());
+    save(out);
+
+    out.close();
   }
 
   /* implicit conversion to SubMtx */

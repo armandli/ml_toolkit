@@ -1,5 +1,9 @@
 # ml_toolkit
-personal machine learning toolkit for solving ML challenges without external library requirement or with only eigen library.
+personal machine learning toolkit for solving ML challenges; Multiple implementations available:
+1. cpp library is one without using any additional library as dependency except for stl
+2. eigen library uses the eigen library as matrix class implementation
+3. blas library uses openblas and cublas library
+4. reader are reader implementations for machine learning purposes
 
 #TODO
 
