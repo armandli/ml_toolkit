@@ -1,9 +1,9 @@
 #ifndef ML_MATRIX
 #define ML_MATRIX
 
-//TODO: make matrix NaN safe
 //TODO: add cublas usages
 //TODO: write delayed element-wise evaluation so to avoid unnecessary copying operation in long expressions
+//TODO: cleanup interface
 
 #include <cassert>
 #include <cmath>
@@ -38,7 +38,7 @@ inline void gpu_assert(cudaError_t code, const char *file, int line, bool abort=
 
 namespace ML {
 
-enum MtxDim {
+enum MtxDim: int {
   MCol,
   MRow,
   MAll,
@@ -112,7 +112,51 @@ public:
 
     return D2Idx(mData, i, j, 1, mStride);
   }
+  double& operator()(size_t i, size_t j){
+    assert(i < rows() && j < cols());
+
+    return D2Idx(mData, i, j, 1, mStride);
+  }
+  
+  template <typename F>
+  SubMtx& unary_expr(F&& f){
+    D2IterR(ir, ic, 0, rows(), 0, cols())
+      D2Idx(mData, ir, ic, rows(), mStride) = f(D2Idx(mData, ir, ic, rows(), mStride));
+    return *this;
+  }
+
+  template <typename F>
+  SubMtx& binary_expr(F&& f, const SubMtx& o){
+    assert(rows() == o.rows() && cols() == o.cols());
+
+    D2IterR(ir, ic, 0, rows(), 0, cols())
+      D2Idx(mData, ir, ic, rows(), mStride) = f(D2Idx(mData, ir, ic, rows(), mStride), D2Idx(o.mData, ir, ic, o.rows(), o.mStride));
+    return *this;
+  }
 };
+
+/* SubMtx scalar assignment operations */
+SubMtx& operator+=(SubMtx& a, double b){
+  a.unary_expr([b](double v){ return v + b; });
+  return a;
+}
+SubMtx& operator-=(SubMtx& a, double b){
+  a.unary_expr([b](double v){ return v - b; });
+  return a;
+}
+
+SubMtx& operator*=(SubMtx& a, double b){
+  a.unary_expr([b](double v){ return v * b; });
+  return a;
+}
+
+SubMtx& operator/=(SubMtx& a, double b){
+  a.unary_expr([b](double v){
+      if (b == 0.) return nan("");
+      else         return v / b;
+  });
+  return a;
+}
 
 std::ostream& operator << (std::ostream& out, const SubMtx& m){
   for (size_t i = 0; i < m.rows(); ++i){
@@ -148,6 +192,38 @@ class Mtx {
 
     in.read((char*)mData, sizeof(double) * mRows * mCols);
   }
+
+  Mtx& t(){
+    mRows ^= mCols;
+    mCols ^= mRows;
+    mRows ^= mCols;
+
+    //this is a columar matrix based transpose algorithm
+    std::vector<bool> visited(rows() * cols(), false);
+    for (size_t i = 0; i < cols(); ++i)
+      for (size_t j = 0; j < rows(); ++j){
+        size_t orig = j + i * rows();
+        size_t dest = i + j * cols();
+
+        if (visited[orig]) continue;
+        if (orig == dest) continue;
+
+        double valence = mData[dest];
+        while (not visited[orig]){
+          mData[dest] = mData[orig];
+          visited[dest] = true;
+
+          size_t col = orig / cols();
+          size_t row = orig % cols();
+          dest = orig;
+          orig = col + row * rows();
+        }
+        mData[dest] = valence;
+        visited[dest] = true;
+      }
+    return *this;
+  }
+
 public:
   Mtx(): mData(nullptr), mRows(0), mCols(0) {}
   Mtx(size_t r, size_t c, double def = 0.):
@@ -233,11 +309,24 @@ public:
 
     return D2Idx(mData, i, j, rows(), cols());
   }
+  double& operator()(size_t i, size_t j){
+    assert(i < rows() && j < cols());
+
+    return D2Idx(mData, i, j, rows(), cols());
+  }
   SubMtx block(size_t rp, size_t cp, size_t rz = 1, size_t cz = 1) {
     assert(rp < rows() && cp < cols() && rp + rz <= rows() && cp + cz <= cols());
 
     double* data = &D2Idx(mData, rp, cp, rows(), cols());
     return SubMtx(data, rz, cz, cols());
+  }
+  SubMtx row(size_t i){
+    double* data = &D2Idx(mData, i, 0, rows(), cols());
+    return SubMtx(data, 1, cols(), cols());
+  }
+  SubMtx col(size_t i){
+    double* data = &D2Idx(mData, 0, i, rows(), cols());
+    return SubMtx(data, rows(), 1, cols());
   }
 
   /* scalar operations */
@@ -245,12 +334,6 @@ public:
   Mtx& unary_expr(F&& f){
     D1Iter(i, 0, rows() * cols()) mData[i] = f(mData[i]);
     return *this;
-  }
-  template <typename F>
-  Mtx unary_expr(F&& f) const {
-    Mtx ret(*this);
-    D1Iter(i, 0, rows() * cols()) ret.mData[i] = f(ret.mData[i]);
-    return ret;
   }
 
   /* matrix operation */
@@ -261,15 +344,6 @@ public:
     D2IterR(ir, ic, 0, rows(), 0, cols())
       D2Idx(mData, ir, ic, rows(), cols()) = f(D2Idx(mData, ir, ic, rows(), cols()), D2Idx(o.mData, ir, ic, rows(), cols()));
     return *this;
-  }
-  template <typename F>
-  Mtx binary_expr(F&& f, const Mtx& o) const {
-    assert(rows() == o.rows() && cols() == o.cols() && rows() > 0 && cols() > 0);
-    Mtx ret(*this);
-
-    D2IterR(ir, ic, 0, rows(), 0, cols())
-      D2Idx(ret.mData, ir, ic, rows(), cols()) = f(D2Idx(ret.mData, ir, ic, rows(), cols()), D2Idx(o.mData, ir, ic, rows(), cols()));
-    return ret;
   }
   Mtx dot(const Mtx& o) const {
     assert(cols() == o.rows());
@@ -282,41 +356,61 @@ public:
                 0., ret.mData, ret.cols());
     return ret;
   }
+  Mtx dot_plus(const Mtx& o, const Mtx& b) const {
+    assert(cols() == o.rows() && cols() == b.cols());
 
-  /* transpose */
-  Mtx& transpose(){
-    mRows ^= mCols;
-    mCols ^= mRows;
-    mRows ^= mCols;
+    Mtx ret = Mtx::zeros(rows(), o.cols());
+    for (size_t i = 0; i < rows(); ++i)
+      memcpy(&ret.mData[i], b.mData, cols() * sizeof(double));
+    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+                rows(), o.cols(), cols(), 1,
+                mData, cols(),
+                o.mData, o.cols(),
+                1., ret.mData, ret.cols());
+    return ret;
+  }
+  template <typename F>
+  Mtx& ternary_expr(F&& f, const Mtx& x, const Mtx& y){
+    assert(rows() == x.rows() && rows() == y.rows() && cols() == x.cols() && cols() == y.cols() && rows() > 0 && cols() > 0);
 
-    //this is a columar matrix based transpose algorithm
-    std::vector<bool> visited(rows() * cols(), false);
-    for (size_t i = 0; i < cols(); ++i)
-      for (size_t j = 0; j < rows(); ++j){
-        size_t orig = j + i * rows();
-        size_t dest = i + j * cols();
-
-        if (visited[orig]) continue;
-        if (orig == dest) continue;
-
-        double valence = mData[dest];
-        while (not visited[orig]){
-          mData[dest] = mData[orig];
-          visited[dest] = true;
-
-          size_t col = orig / cols();
-          size_t row = orig % cols();
-          dest = orig;
-          orig = col + row * rows();
-        }
-        mData[dest] = valence;
-        visited[dest] = true;
-      }
+    D2IterR(ir, ic, 0, rows(), 0, cols())
+      D2Idx(mData, ir, ic, rows(), cols()) = f(D2Idx(mData, ir, ic, rows(), cols()), D2Idx(x.mData, ir, ic, rows(), cols()), D2Idx(y.mData, ir, ic, rows(), cols()));
     return *this;
   }
 
+  /* transpose */
+  Mtx transpose() const {
+    Mtx ret(*this);
+    ret.t();
+    return ret;
+  }
+
+  /* dimensional reduction operations */
+  template <typename F>
+  Mtx reduce(F&& f, MtxDim dim) const {
+    switch (dim){
+    case MRow: {
+      Mtx ret(rows(), 1);
+      for (size_t i = 0; i < rows(); ++i){
+        double* data = &D2Idx(mData, i, 0, rows(), cols());
+        ret(i, 0) = f(SubMtx(data, 1, cols(), cols()));
+      }
+      return ret;
+    } //MRow
+    case MCol: {
+      Mtx ret(1, cols());
+      for (size_t i = 0; i < cols(); ++i){
+        double* data = &D2Idx(mData, 0, i, rows(), cols());
+        ret(0, i) = f(SubMtx(data, rows(), 1, cols()));
+      }
+      return ret;
+    } //MCol
+    default: assert(false);
+    } //switch
+  }
+
   /* statistics operations */
-  std::vector<DimV> max_coeff(MtxDim dim){
+  std::vector<DimV> max_coeff(MtxDim dim) const {
     struct comparator_ {
       bool operator()(double a, double b){
         return a < b ? true : std::isnan(a);
@@ -358,7 +452,7 @@ public:
     } //switch
     return ret;
   }
-  std::vector<DimV> min_coeff(MtxDim dim){
+  std::vector<DimV> min_coeff(MtxDim dim) const {
     struct comparator_ {
       bool operator()(double a, double b){
         return a < b ? true : std::isnan(b);
@@ -400,7 +494,7 @@ public:
     } //switch
     return ret;
   }
-  std::vector<double> sum(MtxDim dim){
+  std::vector<double> sum(MtxDim dim) const {
     struct binop_ {
       double operator()(double a, double b){
         if (std::isnan(b)) return a;
@@ -431,7 +525,7 @@ public:
     } // switch
     return ret;
   }
-  std::vector<double> mean(MtxDim dim){
+  std::vector<double> mean(MtxDim dim) const {
     struct nan_compare_ {
       bool operator()(double d){
         return std::isnan(d);
@@ -561,10 +655,12 @@ Mtx operator/(double b, const Mtx& a){
 
 /* binary matrix operations */
 Mtx operator+(const Mtx& a, const Mtx& b){
-  return a.binary_expr(addition_operation_, b);
+  Mtx ret(a);
+  return ret.binary_expr(addition_operation_, b);
 }
 Mtx operator-(const Mtx& a, const Mtx& b){
-  return a.binary_expr(subtraction_operation_, b);
+  Mtx ret(a);
+  return ret.binary_expr(subtraction_operation_, b);
 }
 Mtx operator*(const Mtx& a, const Mtx& b){
   return a.dot(b);
@@ -620,13 +716,12 @@ bool compare_double(double a, double b){
 bool operator==(const Mtx& a, const Mtx& b){
   if (a.rows() != b.rows() || a.cols() != b.cols()) return false;
 
-  bool is_equal = true;
-  a.binary_expr([&is_equal](double i, double j){
-      if (not compare_double(i, j))
-        is_equal = false;
-      return i;
-  }, b);
-  return is_equal;
+  for (size_t i = 0; i < a.rows(); ++i)
+    for (size_t j = 0; j < a.cols(); ++j)
+      if (not compare_double(a(i, j), b(i, j))){
+        return false;
+      }
+  return true;
 }
 bool operator!=(const Mtx& a, const Mtx& b){
   return not operator==(a, b);

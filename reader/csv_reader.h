@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <limits>
+#include <sstream>
 
 using namespace std;
 
