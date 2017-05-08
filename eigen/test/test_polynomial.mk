@@ -1,6 +1,6 @@
 app=test_polynomial
 
-SOURCES=test_polynomial.cpp csv_reader.cpp
+SOURCES=test_polynomial.cpp
 
 OBJECTS=$(SOURCES:.cpp=.o)
 
@@ -12,7 +12,7 @@ OPT= -O3 -ftree-vectorize -march=native -mfpmath=sse
 
 LIBS=
 
-INCLUDES=-I../ -I./ -I/usr/include/eigen3/
+INCLUDES=-I../ -I./ -I/usr/include/eigen3/ -I../../reader/
 
 CXXFLAGS=-std=c++14 -MD -Wall -Wextra -pthread $(INCLUDES) $(LIBS) $(OPT) $(DEBUG)
 

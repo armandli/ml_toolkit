@@ -76,14 +76,7 @@ MatrixXd formula_compute(const MatrixXd& X){
 }
 
 int main(){
-  set<csv_reader::Column> columns;
-  columns.insert((csv_reader::Column){"a", true});
-  columns.insert((csv_reader::Column){"b", true});
-  columns.insert((csv_reader::Column){"c", true});
-  columns.insert((csv_reader::Column){"d", true});
-  columns.insert((csv_reader::Column){"e", true});
-  columns.insert((csv_reader::Column){"Y", true});
-  csv_reader reader("../../data/linear_5000.csv", columns);
+  csv_reader reader("../../data/linear_5000.csv");
 
   if (not reader.is_open()) return 1;
 
