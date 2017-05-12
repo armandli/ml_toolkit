@@ -22,7 +22,6 @@
 #include <cblas.h>
 
 #include <ml_common.h>
-#include <ml_cuda_buffer.h>
 
 namespace ML {
 
