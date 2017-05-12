@@ -118,10 +118,12 @@ TEST_F(ArithTest, MatrixMul){
                       ,308.,322.,336.,350.,364.,378.
                       ,330.,345.,360.,375.,390.,405.
                       ,352.,368.,384.,400.,416.,432.};
+  vector<double> rd = {2002.};
 
   Mtx x = a * b;
   Mtx y = c * d;
   Mtx z = e * f;
+  Mtx i = f * e;
 
   for (size_t i = 0; i < 2; ++i)
     for (size_t j = 0; j < 2; ++j)
@@ -134,6 +136,8 @@ TEST_F(ArithTest, MatrixMul){
   for (size_t i = 0; i < 6; ++i)
     for (size_t j = 0; j < 6; ++j)
       EXPECT_DOUBLE_EQ(rc[i * 6 + j], z(i, j));
+
+  EXPECT_DOUBLE_EQ(rd[0], i(0, 0));
 }
 
 TEST_F(ArithTest, ComplexExpression){
@@ -148,26 +152,26 @@ TEST_F(ArithTest, ComplexExpression){
 TEST_F(ArithTest, Transpose){
   vector<double> res = {2.,4.,3.,5.};
 
-  b.transpose();
+  Mtx rb = b.transpose();
 
   for (size_t i = 0; i < 2; ++i)
     for (size_t j = 0; j < 2; ++j)
-      EXPECT_DOUBLE_EQ(res[i * 2 + j], b(i, j));
+      EXPECT_DOUBLE_EQ(res[i * 2 + j], rb(i, j));
 
   vector<double> reg = {22.,23.,24.,25.,26.,27.};
 
-  f.transpose();
+  Mtx rf = f.transpose();
 
   for (size_t i = 0; i < 6; ++i)
-    EXPECT_DOUBLE_EQ(reg[i], f(i, 0));
+    EXPECT_DOUBLE_EQ(reg[i], rf(i, 0));
 
   vector<double> ref = {11.,13.,15.,12.,14.,16.};
 
-  c.transpose();
+  Mtx rc = c.transpose();
 
   for (size_t i = 0; i < 2; ++i)
     for (size_t j = 0; j < 3; ++j)
-      EXPECT_DOUBLE_EQ(ref[i * 3 + j], c(i, j));
+      EXPECT_DOUBLE_EQ(ref[i * 3 + j], rc(i, j));
 }
 
 struct StatTest : ::testing::Test {
