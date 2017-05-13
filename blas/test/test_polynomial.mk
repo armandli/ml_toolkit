@@ -1,6 +1,6 @@
 app=test_polynomial
 
-SOURCES=test_polynomial.cpp csv_reader.cpp
+SOURCES=test_polynomial.cpp
 
 OBJECTS=$(SOURCES:.cpp=.o)
 

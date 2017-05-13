@@ -207,7 +207,7 @@ class Mtx {
           }
         }
       }
-    }   
+    }
   }
 
 public:
@@ -394,7 +394,7 @@ public:
       return ret;
     }
     Mtx ret(cols(), rows());
-    transpose_block_SSE2x2(mData, ret.mData, mRowStride, mColStride, mRowStride, mColStride);
+    transpose_block_SSE2x2(mData, ret.mData, mRowStride, mColStride, mColStride, mRowStride);
     return ret;
   }
 
