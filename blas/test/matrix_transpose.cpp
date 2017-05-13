@@ -13,7 +13,10 @@ Mtx transpose(const Mtx& m){
 }
 
 int main(){
-  Mtx a = Mtx::random(SZ, SZ);
+  Mtx a(SZ, SZ);
+  for (size_t i = 0; i < SZ; ++i)
+    for (size_t j = 0; j < SZ; ++j)
+      a(i, j) = (double)i * (double)j;
 
   clock_t start = clock();
   Mtx b = transpose(a);

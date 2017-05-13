@@ -14,7 +14,15 @@ LIBS=
 
 INCLUDES=-I../ -I./ -I/usr/include/eigen3/
 
-CXXFLAGS=-std=c++14 -MD -Wall -Wextra -pthread $(INCLUDES) $(LIBS) $(OPT) $(DEBUG)
+#restrict Eigen temporaries
+#DEFINES=-DEIGEN_NO_MALLOC
+
+#test for runtime no malloc
+#DEFINES=-DEIGEN_RUNTIME_NO_MALLOC
+
+DEFINES=
+
+CXXFLAGS=-std=c++14 -MD -Wall -Wextra -pthread $(INCLUDES) $(LIBS) $(OPT) $(DEBUG) $(DEFINES)
 
 COMPILER=g++
 

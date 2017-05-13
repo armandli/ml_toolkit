@@ -10,19 +10,23 @@ using Eigen::MatrixXd;
 #define SZ 4096
 
 int main(){
-  MatrixXd a = MatrixXd::Random(SZ, SZ);
+  MatrixXd a = MatrixXd(SZ, SZ);
+  for (size_t i = 0; i < SZ; ++i)
+    for (size_t j = 0; j < SZ; ++j)
+      a(i, j) = (double)i * (double)j;
 
   clock_t start = clock();
   MatrixXd b = a.transpose();
   cout << "Time: " << (clock() - start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << endl;
 
-  bool iszero = false;
+  bool is_correct = true;
   for (size_t i = 0; i < SZ; ++i)
     for (size_t j = 0; j < SZ; ++j)
-      if (b(i, j) == 0.){
-        iszero = true;
-      }
+      if (a(i, j) != b(j, i)){
+        is_correct = false;
+        break;
+      }   
 
-  if (iszero) cout << "zero found" << endl;
-  else        cout << "zero not found" << endl;
+  if (is_correct) cout << "correct!" << endl;
+  else            cout << "not correct!" << endl;
 }
