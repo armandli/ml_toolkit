@@ -66,6 +66,7 @@ int main() {
                 std::cout << "device not used: " << ext << std::endl;
                 continue;
               }
+              std::cout << "device used: " << ext << std::endl;
               device.push_back(*d);
           }
 //          context = cl::Context(device[0]);
@@ -75,7 +76,7 @@ int main() {
     }
 
     if (device.empty()) {
-        std::cout << "GPUs with double precision not found. Trying CPU" << std::endl;
+        std::cout << "GPUs with double precision not found." << std::endl;
         exit(1);
     }
 
