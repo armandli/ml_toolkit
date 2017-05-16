@@ -191,19 +191,19 @@ struct StatTest : ::testing::Test {
 TEST_F(StatTest, MaxCoeff){
   vector<DimV> mra = a.max_coeff(MRow);
   vector<DimV> mca = a.max_coeff(MCol);
-  vector<DimV> ma  = a.max_coeff(MAll);
+  DimV ma  = a.max_coeff();
 
   vector<DimV> mrb = b.max_coeff(MRow);
   vector<DimV> mcb = b.max_coeff(MCol);
-  vector<DimV> mb  = b.max_coeff(MAll);
+  DimV mb  = b.max_coeff();
 
   vector<DimV> mrc = c.max_coeff(MRow);
   vector<DimV> mcc = c.max_coeff(MCol);
-  vector<DimV> mc  = c.max_coeff(MAll);
+  DimV mc  = c.max_coeff();
 
-  EXPECT_DOUBLE_EQ(17.01, ma[0].val);
-  EXPECT_DOUBLE_EQ(18., mb[0].val);
-  EXPECT_DOUBLE_EQ(18., mc[0].val);
+  EXPECT_DOUBLE_EQ(17.01, ma.val);
+  EXPECT_DOUBLE_EQ(18., mb.val);
+  EXPECT_DOUBLE_EQ(18., mc.val);
 
   EXPECT_EQ(3, mra[0].idx);
   EXPECT_EQ(3, mra[1].idx);
@@ -227,19 +227,19 @@ TEST_F(StatTest, MaxCoeff){
 TEST_F(StatTest, MinCoeff){
   vector<DimV> mra = a.min_coeff(MRow);
   vector<DimV> mca = a.min_coeff(MCol);
-  vector<DimV> ma  = a.min_coeff(MAll);
+  DimV ma  = a.min_coeff();
 
   vector<DimV> mrb = b.min_coeff(MRow);
   vector<DimV> mcb = b.min_coeff(MCol);
-  vector<DimV> mb  = b.min_coeff(MAll);
+  DimV mb  = b.min_coeff();
 
   vector<DimV> mrc = c.min_coeff(MRow);
   vector<DimV> mcc = c.min_coeff(MCol);
-  vector<DimV> mc  = c.min_coeff(MAll);
+  DimV mc  = c.min_coeff();
 
-  EXPECT_DOUBLE_EQ(1., ma[0].val);
-  EXPECT_DOUBLE_EQ(2., mb[0].val);
-  EXPECT_DOUBLE_EQ(2., mc[0].val);
+  EXPECT_DOUBLE_EQ(1., ma.val);
+  EXPECT_DOUBLE_EQ(2., mb.val);
+  EXPECT_DOUBLE_EQ(2., mc.val);
 
   EXPECT_EQ(0, mra[0].idx);
   EXPECT_EQ(0, mra[1].idx);
@@ -263,33 +263,33 @@ TEST_F(StatTest, MinCoeff){
 TEST_F(StatTest, Sum){
   vector<double> mra = a.sum(MRow);
   vector<double> mca = a.sum(MCol);
-  vector<double> ma  = a.sum(MAll);
+  double ma  = a.sum();
 
   vector<double> mrb = b.sum(MRow);
   vector<double> mcb = b.sum(MCol);
-  vector<double> mb  = b.sum(MAll);
+  double mb  = b.sum();
 
   vector<double> mrc = c.sum(MRow);
   vector<double> mcc = c.sum(MCol);
-  vector<double> mc  = c.sum(MAll);
+  double mc  = c.sum();
 
-  EXPECT_DOUBLE_EQ(155.633, ma[0]);
-  EXPECT_DOUBLE_EQ(60., mb[0]);
-  EXPECT_DOUBLE_EQ(51., mc[0]);
+  EXPECT_DOUBLE_EQ(155.633, ma);
+  EXPECT_DOUBLE_EQ(60., mb);
+  EXPECT_DOUBLE_EQ(51., mc);
 }
 
 TEST_F(StatTest, Mean){
   vector<double> mra = a.mean(MRow);
   vector<double> mca = a.mean(MCol);
-  vector<double> ma  = a.mean(MAll);
+  double ma  = a.mean();
 
   vector<double> mrb = b.mean(MRow);
   vector<double> mcb = b.mean(MCol);
-  vector<double> mb  = b.mean(MAll);
+  double mb  = b.mean();
 
   vector<double> mrc = c.mean(MRow);
   vector<double> mcc = c.mean(MCol);
-  vector<double> mc  = c.mean(MAll);
+  double mc  = c.mean();
 
   EXPECT_DOUBLE_EQ(13.25, mra[0]);
   EXPECT_DOUBLE_EQ(9.44075, mra[1]);
@@ -300,7 +300,7 @@ TEST_F(StatTest, Mean){
   EXPECT_DOUBLE_EQ(12.459, mca[2]);
   EXPECT_DOUBLE_EQ(16.47, mca[3]);
 
-  EXPECT_DOUBLE_EQ(12.969416666666667, ma[0]);
+  EXPECT_DOUBLE_EQ(12.969416666666667, ma);
 
   EXPECT_DOUBLE_EQ(5.5, mrc[0]);
   EXPECT_DOUBLE_EQ(8., mrc[1]);
@@ -311,7 +311,7 @@ TEST_F(StatTest, Mean){
   EXPECT_DOUBLE_EQ(3., mcc[1]);
   EXPECT_DOUBLE_EQ(3.3333333333333333, mcc[2]);
 
-  EXPECT_DOUBLE_EQ(5.6666666666666667, mc[0]);
+  EXPECT_DOUBLE_EQ(5.6666666666666667, mc);
 }
 
 TEST(BlockCopyTest, BlockCopyTest){

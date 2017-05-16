@@ -28,7 +28,6 @@ namespace ML {
 enum MtxDim: int {
   MCol,
   MRow,
-  MAll,
 };
 
 struct DimV {
@@ -422,6 +421,14 @@ public:
     } //switch
   }
 
+  template <typename F>
+  double reduce(F&& f) const {
+    double ret = 0.;
+    D2IterR(ir, ic, 0, rows(), 0, cols())
+      ret += f(D2Idx(mData, ir, ic, mRowStride, mColStride));
+    return ret;
+  }
+
   /* statistics operations */
   std::vector<DimV> max_coeff(MtxDim dim) const {
     struct comparator_ {
@@ -457,25 +464,36 @@ public:
         else                                            ret.emplace_back((DimV){dist, vmax});
       }
     } break; //mCol
-    case MAll: {
-      size_t dist = std::numeric_limits<size_t>::max();
-      double vmax = std::numeric_limits<double>::min();
-      for (size_t ir = 0; ir < rows(); ++ir){
-        double* pvmax = std::max_element(&D2Idx(mData, ir, 0, mRowStride, mColStride),
-                                         &D2Idx(mData, ir, cols(), mRowStride, mColStride),
-                                         comparator);
-        if (*pvmax > vmax){
-          dist = std::distance(&D2Idx(mData, ir, 0, mRowStride, mColStride), pvmax) + ir * cols();
-          vmax = *pvmax;
-        }
-      }
-      if (dist == std::numeric_limits<size_t>::max()) ret.emplace_back((DimV){dist, nan("")});
-      else                                            ret.emplace_back((DimV){dist, vmax});
-    } break; //mAll
     default: assert(false);
     } //switch
     return ret;
   }
+
+  DimV max_coeff() const {
+    struct comparator_ {
+      bool operator()(double a, double b){
+        return a < b ? true : std::isnan(a);
+      }
+    } comparator;
+
+    DimV ret;
+    ret.idx = std::numeric_limits<size_t>::max();
+    ret.val = std::numeric_limits<double>::min();
+    for (size_t ir = 0; ir < rows(); ++ir){
+      double* pvmax = std::max_element(&D2Idx(mData, ir, 0, mRowStride, mColStride),
+                                       &D2Idx(mData, ir, cols(), mRowStride, mColStride),
+                                       comparator);
+      if (*pvmax > ret.val){
+        ret.idx = std::distance(&D2Idx(mData, ir, 0, mRowStride, mColStride), pvmax) + ir * cols();
+        ret.val = *pvmax;
+      }
+    }
+
+    if (ret.idx == std::numeric_limits<size_t>::max())
+      ret.val = nan("");
+    return ret;
+  }
+
   std::vector<DimV> min_coeff(MtxDim dim) const {
     struct comparator_ {
       bool operator()(double a, double b){
@@ -510,25 +528,35 @@ public:
         else                                            ret.emplace_back((DimV){dist, vmin});
       }
     } break; //MCol
-    case MAll: {
-      size_t dist = std::numeric_limits<size_t>::max();
-      double vmin = std::numeric_limits<double>::max();
-      for (size_t ir = 0; ir < rows(); ++ir){
-        double *pvmin = std::min_element(&D2Idx(mData, ir, 0, mRowStride, mColStride),
-                                         &D2Idx(mData, ir, cols(), mRowStride, mColStride),
-                                         comparator);
-        if (*pvmin < vmin){
-          dist = std::distance(&D2Idx(mData, ir, 0, mRowStride, mColStride), pvmin) + ir * cols();
-          vmin = *pvmin;
-        }
-      }
-      if (dist == std::numeric_limits<size_t>::max()) ret.emplace_back((DimV){dist, nan("")});
-      else                                            ret.emplace_back((DimV){dist, vmin});
-    } break; //MAll
     default: assert(false);
     } //switch
     return ret;
   }
+
+  DimV min_coeff() const {
+    struct comparator_ {
+      bool operator()(double a, double b){
+        return a < b ? true : std::isnan(b);
+      }
+    } comparator;
+
+    DimV ret;
+    ret.idx = std::numeric_limits<size_t>::max();
+    ret.val = std::numeric_limits<double>::max();
+    for (size_t ir = 0; ir < rows(); ++ir){
+      double *pvmin = std::min_element(&D2Idx(mData, ir, 0, mRowStride, mColStride),
+                                       &D2Idx(mData, ir, cols(), mRowStride, mColStride),
+                                       comparator);
+      if (*pvmin < ret.val){
+        ret.idx = std::distance(&D2Idx(mData, ir, 0, mRowStride, mColStride), pvmin) + ir * cols();
+        ret.val = *pvmin;
+      }
+    }
+    if (ret.idx == std::numeric_limits<size_t>::max())
+      ret.val = nan("");
+    return ret;
+  }
+
   std::vector<double> sum(MtxDim dim) const {
     struct binop_ {
       double operator()(double a, double b){
@@ -555,13 +583,22 @@ public:
         ret.push_back(sum);
       }
     } break; //MCol
-    case MAll:
-      ret.push_back(std::accumulate(mData, &mData[mRowStride * mColStride], 0., binop));
-    break; //MAll
     default: assert(false);
     } // switch
     return ret;
   }
+
+  double sum() const {
+    struct binop_ {
+      double operator()(double a, double b){
+        if (std::isnan(b)) return a;
+        else               return a + b;
+      }
+    } binop;
+
+    return std::accumulate(mData, &mData[mRowStride * mColStride], 0., binop);
+  }
+
   std::vector<double> mean(MtxDim dim) const {
     struct nan_compare_ {
       bool operator()(double d){
@@ -588,16 +625,25 @@ public:
         sizes.push_back(rows() - na);
       }
     } break; //MCol
-    case MAll: {
-      size_t na = std::count_if(mData, &mData[mRowStride * mColStride], nan_compare);
-      sizes.push_back(rows() * cols() - na);
-    } break; //MAll
     default: assert(false);
     }
 
     for (size_t i = 0; i < sums.size(); ++i)
       sums[i] /= sizes[i];
     return sums;
+  }
+
+  double mean() const {
+    struct nan_compare_ {
+      bool operator()(double d){
+        return std::isnan(d);
+      }
+    } nan_compare;
+
+    double s = sum();
+    size_t na = std::count_if(mData, &mData[mRowStride * mColStride], nan_compare);
+
+    return s / (double)(rows() * cols() - na);
   }
 
   /* save */
