@@ -12,15 +12,19 @@ namespace ML {
 /* Cost Functions */
 struct MSE {
   double loss(const Mtx& O, const Mtx& Y){
-    Mtx D = O - Y;
-    D.unary_expr([](double d){ return d * d; });
-    double loss = D.sum(MAll)[0] / (double)O.rows();
+    double loss = O.binary_reduce([](double o, double y){
+        double d = o - y;
+        return d * d;
+    }, Y);
+    loss /= (double)O.rows();
     return loss;
   }
   double accuracy(const Mtx& O, const Mtx& Y){
-    Mtx D = O - Y;
-    D.unary_expr([](double d){ return d * d; });
-    return sqrt(D.sum(MAll)[0]) * 0.5 / (double)O.rows();
+    double acc = O.binary_reduce([](double o, double y){
+        double d = o - y;
+        return d * d;
+    }, Y);
+    return sqrt(acc) * 0.5 / (double)O.rows();
   }
   Mtx deriviative(const Mtx& O, const Mtx& Y){
     Mtx dY = O - Y;
@@ -208,8 +212,8 @@ struct L2Reg {
     D.unary_expr([](double d){
       return d * d;
     });
-    std::vector<double> sums = D.sum(MAll);
-    return sums[0] * 0.5 * reg;
+    double sum = D.sum();
+    return sum * 0.5 * reg;
   }
   void regularize(Mtx& dW, Mtx& W, double reg){
     dW.binary_expr([&reg](double d, double w){ 

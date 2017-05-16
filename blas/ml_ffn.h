@@ -28,14 +28,13 @@ class FFN1 {
     cost.classification(O);
     return O;
   }
-  double compute_loss(const Mtx& O, const Mtx& Y, size_t icount){
+  double compute_loss(const Mtx& O, const Mtx& Y){
     double data_loss, reg_loss;
 
     data_loss = cost.loss(O, Y);
     reg_loss = regularization.loss(W, regularization_rate);
 
-    if (display_loss && icount % (iterations / 100) == 0)
-      std::cout << "data: " << data_loss << " reg: " << reg_loss << std::endl;
+    std::cout << "data: " << data_loss << " reg: " << reg_loss << std::endl;
 
     return data_loss + reg_loss;
   }
@@ -63,7 +62,8 @@ public:
       Mtx dW;
 
       Mtx O = feed_forward(X);
-      compute_loss(O, Y, k);
+      if (display_loss && k % (iterations / 100) == 0)
+        compute_loss(O, Y);
       back_propagation(X, O, Y, dW);
       param_update(dW);
     }
@@ -147,7 +147,7 @@ class FFN {
     return O;
   }
 
-  double compute_loss(const Mtx& O, const Mtx& Y, int icount){
+  double compute_loss(const Mtx& O, const Mtx& Y){
     double data_loss = 0., reg_loss = 0.;
 
     data_loss = cost.loss(O, Y);
@@ -155,8 +155,7 @@ class FFN {
     for (size_t i = 0; i < Ws.size(); ++i)
       reg_loss += regularization.loss(Ws[i], regularization_rate);
 
-    if (display_loss && icount % (iterations / 100) == 0)
-      std::cout << "data: " << data_loss << " reg: " << reg_loss << std::endl;
+    std::cout << "data: " << data_loss << " reg: " << reg_loss << std::endl;
 
     return data_loss + reg_loss;
   }
@@ -206,7 +205,8 @@ public:
       std::vector<Mtx> dWs;
 
       Mtx O = IsDropout ? dropout(X) : feed_forward(X);
-      compute_loss(O, Y, k);
+      if (display_loss && k % (iterations / 100) == 0)
+        compute_loss(O, Y);
       back_propagation(X, O, Y, dWs);
       param_update(dWs);
     }

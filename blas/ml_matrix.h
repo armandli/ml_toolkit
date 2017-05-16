@@ -1,9 +1,7 @@
 #ifndef ML_MATRIX
 #define ML_MATRIX
 
-//TODO: add cublas usages
 //TODO: write delayed element-wise evaluation so to avoid unnecessary copying operation in long expressions
-//TODO: cleanup interface
 
 #include <cassert>
 #include <cmath>
@@ -422,10 +420,31 @@ public:
   }
 
   template <typename F>
-  double reduce(F&& f) const {
-    double ret = 0.;
+  double reduce(F&& f, double init = 0.) const {
+    double ret = init;
     D2IterR(ir, ic, 0, rows(), 0, cols())
       ret += f(D2Idx(mData, ir, ic, mRowStride, mColStride));
+    return ret;
+  }
+  template <typename F>
+  double binary_reduce(F&& f, const Mtx& o, double init = 0.) const {
+    assert(rows() == o.rows() && cols() == o.cols());
+
+    double ret = init;
+    D2IterR(ir, ic, 0, rows(), 0, cols())
+      ret += f(D2Idx(mData, ir, ic, mRowStride, mColStride),
+               D2Idx(o.mData, ir, ic, o.mRowStride, o.mColStride));
+    return ret;
+  }
+  template <typename F>
+  double ternary_reduce(F&& f, const Mtx& x, const Mtx& y, double init = 0.) const {
+    assert(rows() == x.rows() && rows() == y.rows() && cols() == x.cols() && cols() == y.cols() && rows() > 0 && cols() > 0);
+
+    double ret = init;
+    D2IterR(ir, ic, 0, rows(), 0, cols())
+      ret += f(D2Idx(mData, ir, ic, mRowStride, mColStride),
+               D2Idx(x.mData, ir, ic, mRowStride, mColStride),
+               D2Idx(y.mData, ir, ic, mRowStride, mColStride));
     return ret;
   }
 

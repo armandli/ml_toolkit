@@ -104,6 +104,6 @@ int main(){
   }, T);
   cout << D << endl;
 
-  vector<double> sums = D.sum(ML::MAll);
-  cout << "average: " << sums[0] / D.rows() << endl;
+  double sum = D.sum();
+  cout << "average: " << sum / D.rows() << endl;
 }
