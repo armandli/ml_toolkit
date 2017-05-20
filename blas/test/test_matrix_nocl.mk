@@ -1,6 +1,6 @@
-app=test_matrix_nocuda
+app=test_matrix_nocl
 
-SOURCES=test_matrix_nocuda.cpp
+SOURCES=test_matrix_nocl.cpp
 
 OBJECTS=$(SOURCES:.cpp=.o)
 

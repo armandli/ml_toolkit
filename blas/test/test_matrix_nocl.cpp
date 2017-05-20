@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 
+#define NO_OPENCL
 #include <ml_matrix.h>
 
 using namespace std;
