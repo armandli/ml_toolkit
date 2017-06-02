@@ -52,8 +52,8 @@ int main() {
         std::vector<cl::Device> pldev;
 
         try {
-//          p->getDevices(CL_DEVICE_TYPE_GPU, &pldev);
-          p->getDevices(CL_DEVICE_TYPE_CPU, &pldev);
+          p->getDevices(CL_DEVICE_TYPE_GPU, &pldev);
+//          p->getDevices(CL_DEVICE_TYPE_CPU, &pldev);
   
           for(auto d = pldev.begin(); device.empty() && d != pldev.end(); d++) {
               if (not d->getInfo<CL_DEVICE_AVAILABLE>()) continue;
