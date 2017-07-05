@@ -1,6 +1,6 @@
-app=matrix_transpose
+app=test_clblas
 
-SOURCES=matrix_transpose.cpp
+SOURCES=test_clblas.cpp
 
 OBJECTS=$(SOURCES:.cpp=.o)
 
@@ -10,9 +10,9 @@ DEBUG=-g
 OTHER_OPT= -funroll-loops #not working well
 OPT= -O3 -ftree-vectorize -march=native -mfpmath=sse -msse2
 
-LIBS=-lopenblas -lpthread -lgfortran
+LIBS=-lopenblas -lpthread -lgfortran -lOpenCL -L/opt/clblas/lib64 -lclBLAS -L/opt/clblast/lib -lclblast
 
-INCLUDES=-I../ -I./
+INCLUDES=-I../ -I./ -I/opt/clblas/include -I/opt/clblast/include
 
 CXXFLAGS=-std=c++14 -MD -Wall -Wextra -pthread $(INCLUDES) $(LIBS) $(OPT) $(DEBUG)
 

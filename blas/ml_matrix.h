@@ -760,11 +760,13 @@ Mtx operator/(double b, const Mtx& a){
 /* binary matrix operations */
 Mtx operator+(const Mtx& a, const Mtx& b){
   Mtx ret(a);
-  return ret.binary_expr(addition_operation_, b);
+  ret.binary_expr(addition_operation_, b);
+  return ret;
 }
 Mtx operator-(const Mtx& a, const Mtx& b){
   Mtx ret(a);
-  return ret.binary_expr(subtraction_operation_, b);
+  ret.binary_expr(subtraction_operation_, b);
+  return ret;
 }
 Mtx operator*(const Mtx& a, const Mtx& b){
   return a.dot(b);

@@ -8,7 +8,7 @@ all: $(app)
 
 DEBUG=-g
 OTHER_OPT= -funroll-loops #not working well
-OPT= -O3 -ftree-vectorize -march=native -mfpmath=sse
+OPT= -O3 -ftree-vectorize -march=native -mfpmath=sse -msse2
 
 LIBS=
 
