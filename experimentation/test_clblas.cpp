@@ -135,18 +135,16 @@ public:
   }
 };
 
-int main(){
-  Mtx a(SZ, SZ), b(SZ, SZ), c(SZ, SZ), d(SZ, SZ);
-
-  generate_sample(a, b, c);
+vector<cl::Device> getDevices(){
+  vector<cl::Device> ret;
 
   vector<cl::Platform> platforms;
   cl::Platform::get(&platforms);
   if (platforms.empty()){
     cout << "Failed to get platforms" << endl;
-    return 1;
+    return ret;
   }
-  vector<cl::Device> devs;
+
   for (auto p = platforms.begin(); p != platforms.end(); ++p){
     vector<cl::Device> pdevs;
     try {
@@ -157,21 +155,26 @@ int main(){
         string ext = d->getInfo<CL_DEVICE_EXTENSIONS>();
         if (ext.find("cl_khr_fp64") == string::npos && ext.find("cl_amd_fp64") == string::npos)
           continue;
-        devs.push_back(*d);
+        ret.push_back(*d);
       }
     } catch (...){
     }
   }
-  if (devs.empty()){
-    cout << "No Device Found" << endl;
-    return 1;
-  }
 
-  cl::Context context(devs[0]);
+  return ret;
+}
+
+int main(){
+  Mtx a(SZ, SZ), b(SZ, SZ), c(SZ, SZ), d(SZ, SZ);
+
+  generate_sample(a, b, c);
+
+  vector<cl::Device> devs = getDevices();
+
+  cl::Context context(devs);
   cl::CommandQueue queue(context, devs[0]);
-  cl::Event event;
-
-  cl_int err;
+//  cl::Event event;
+//  cl_int err;
 
   /* Setup clblas. */
 //  err = clblasSetup();

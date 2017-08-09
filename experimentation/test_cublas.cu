@@ -129,16 +129,16 @@ int main(){
   cudaMemcpy(c.data, dc.data, sizeof(double) * c.rows * c.cols, cudaMemcpyDeviceToHost);
   cout << "Time: " << (clock() - timing_start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << endl;
 
-  timing_start = clock();
-  clock_t timing_end = matrix_multiply(d, a, b);
+//  timing_start = clock();
+//  clock_t timing_end = matrix_multiply(d, a, b);
 
-  bool is_same = true;
-  for (size_t i = 0; i < c.rows; ++i)
-    for (size_t j = 0; j < c.cols; ++j)
-      if (c.data[i * c.cols + j] != d.data[i * d.cols + j]){
-        cout << "Result Unequal by " << (c.data[i * c.cols + j] - d.data[i * d.cols + j]) << endl;
-        is_same = false;
-        break;
-      }
-  if (is_same) cout << "Result equal" << endl;
+//  bool is_same = true;
+//  for (size_t i = 0; i < c.rows; ++i)
+//    for (size_t j = 0; j < c.cols; ++j)
+//      if (c.data[i * c.cols + j] != d.data[i * d.cols + j]){
+//        cout << "Result Unequal by " << (c.data[i * c.cols + j] - d.data[i * d.cols + j]) << endl;
+//        is_same = false;
+//        break;
+//      }
+//  if (is_same) cout << "Result equal" << endl;
 }
