@@ -6,7 +6,7 @@
 using namespace std;
 using namespace ML;
 
-#define SZ 4096
+#define SZ 2048
 
 Mtx transpose(const Mtx& m){
   return m.transpose();
@@ -20,7 +20,7 @@ int main(){
 
   clock_t start = clock();
   Mtx b = transpose(a);
-  cout << "Time: " << (clock() - start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << endl;
+  cout << "Time: " << (clock() - start) << " us" << endl;
 
   bool is_correct = true;
   for (size_t i = 0; i < SZ; ++i)

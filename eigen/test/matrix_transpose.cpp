@@ -7,7 +7,7 @@ using namespace std;
 
 using Eigen::MatrixXd;
 
-#define SZ 4096
+#define SZ 2048
 
 int main(){
   MatrixXd a = MatrixXd(SZ, SZ);
@@ -17,7 +17,7 @@ int main(){
 
   clock_t start = clock();
   MatrixXd b = a.transpose();
-  cout << "Time: " << (clock() - start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << endl;
+  cout << "Time: " << (clock() - start) << " us" << endl;
 
   bool is_correct = true;
   for (size_t i = 0; i < SZ; ++i)

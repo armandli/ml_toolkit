@@ -124,6 +124,7 @@ void test_mm256_isnan_pd(){
 }
 
 //implement using taylor series e^x = 1 + x + x^2 / 2! + x^3 / 3! + x^4 / 4! ...
+//TODO: this is buggy for large negative values
 __m256d vanilla_mm256_exp_pd(__m256d x){
   __m256d p1 = _mm256_set1_pd(1.);
   __m256d precision = _mm256_set1_pd(1.11e-16);
@@ -153,18 +154,39 @@ __m256d vanilla_mm256_exp_pd(__m256d x){
 }
 
 void test_vanilla_mm256_exp_pd(){
+  double tresa[4];
+
   double t1a[4] = {0., 1., 3.6, 1.746};
   __m256d t1v = _mm256_loadu_pd(t1a);
 
   __m256d tres = vanilla_mm256_exp_pd(t1v);
-  double tresa[4];
   _mm256_storeu_pd(tresa, tres);
 
-  double  texp[4] = {exp(0.), exp(1.), exp(3.6), exp(1.746)};
+  double  texp1[4] = {exp(0.), exp(1.), exp(3.6), exp(1.746)};
 
   for (size_t i = 0; i < 4; ++i){
-    cout << tresa[i] << " " << texp[i] << endl;
+    cout << tresa[i] << " " << texp1[i] << endl;
   }
+
+  double t2a[4] = {0.5, -0.5, 15., -15.};
+  t1v = _mm256_loadu_pd(t2a);
+
+  tres = vanilla_mm256_exp_pd(t1v);
+  _mm256_storeu_pd(tresa, tres);
+
+  double texp2[4] = {exp(0.5), exp(-0.5), exp(15.), exp(-15.)};
+  for (size_t i = 0; i < 4; ++i)
+    cout << tresa[i] << " " << texp2[i] << endl;
+
+  double t3a[4] = {28.76, -28.76, 97.7778, -97.7778};
+  t1v = _mm256_loadu_pd(t3a);
+
+  tres = vanilla_mm256_exp_pd(t1v);
+  _mm256_storeu_pd(tresa, tres);
+
+  double texp3[4] = {exp(28.76), exp(-28.76), exp(97.7778), exp(-97.7778)};
+  for (size_t i = 0; i < 4; ++i)
+    cout << tresa[i] << " " << texp3[i] << endl;
 }
 
 //e^x = limit n -> inf (1 + x / n) ^ n
@@ -224,19 +246,41 @@ __m256d fast_mm256_exp1024_pd(__m256d x){
 }
 
 void test_fast_mm256_exp1024_pd(){
+  double tresa[4];
+
   double t1a[4] = {0., 1., 3.6, 1.746};
   __m256d t1v = _mm256_loadu_pd(t1a);
 
   __m256d tres = fast_mm256_exp1024_pd(t1v);
-  double tresa[4];
   _mm256_storeu_pd(tresa, tres);
 
-  double  texp[4] = {exp(0.), exp(1.), exp(3.6), exp(1.746)};
+  double  texp1[4] = {exp(0.), exp(1.), exp(3.6), exp(1.746)};
 
   for (size_t i = 0; i < 4; ++i){
-    cout << tresa[i] << " " << texp[i] << endl;
+    cout << tresa[i] << " " << texp1[i] << endl;
   }
+
+  double t2a[4] = {0.5, -0.5, 15., -15.};
+  t1v = _mm256_loadu_pd(t2a);
+
+  tres = fast_mm256_exp1024_pd(t1v);
+  _mm256_storeu_pd(tresa, tres);
+
+  double texp2[4] = {exp(0.5), exp(-0.5), exp(15.), exp(-15.)};
+  for (size_t i = 0; i < 4; ++i)
+    cout << tresa[i] << " " << texp2[i] << endl;
+
+  double t3a[4] = {28.76, -28.76, 97.7778, -97.7778};
+  t1v = _mm256_loadu_pd(t3a);
+
+  tres = fast_mm256_exp1024_pd(t1v);
+  _mm256_storeu_pd(tresa, tres);
+
+  double texp3[4] = {exp(28.76), exp(-28.76), exp(97.7778), exp(-97.7778)};
+  for (size_t i = 0; i < 4; ++i)
+    cout << tresa[i] << " " << texp3[i] << endl;
 }
+
 
 // tanh(x) = (exp(2x) - 1) / (exp(2x) + 1)
 __m256d implement_mm256_tanh_pd(__m256d x){
