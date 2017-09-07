@@ -13,12 +13,21 @@ __global__ void add_block1(double* dst, const double* s1, const double* s2){
 
 //using vector types. no significant improvement
 __global__ void add_block2(double* dst, const double* s1, const double* s2){
-  size_t gid = (blockDim.x * blockIdx.x + threadIdx.x) * 4;
+  size_t gid = (blockDim.x * blockIdx.x + threadIdx.x) * 2;
   double2* s1d2 = (double2*)&s1[gid];
   double2* s2d2 = (double2*)&s2[gid];
   double2* dd2  = (double2*)&dst[gid];
   *dd2 = make_double2((*s1d2).x + (*s2d2).x, (*s1d2).y + (*s2d2).y);
-  dd2[1] = make_double2(s1d2[1].x + s2d2[1].x, s1d2[1].y + s2d2[1].y);
+}
+
+__global__ void add_block3(double* dst, const double* s1, const double* s2, size_t sz){
+  size_t id = blockDim.x *blockIdx.x + threadIdx.x;
+  size_t increment = blockDim.x * gridDim.x;
+
+  while (id < sz){
+    dst[id] = s1[id] + s2[id];
+    id += increment;
+  }
 }
 
 void add_block_sse(double* dst, const double* s1, const double* s2, size_t rowstride, size_t colstride){
@@ -40,13 +49,21 @@ int main(){
   cudaMemcpy(da.data, a.data, sizeof(double) * a.rows * a.cols, cudaMemcpyHostToDevice);
   cudaMemcpy(db.data, b.data, sizeof(double) * b.rows * b.cols, cudaMemcpyHostToDevice);
 
-  dim3 blocks(BSZ * BSZ);
-  dim3 tpb(TSZ * TSZ);
-  add_block1<<< blocks, tpb >>>(dc.data, da.data, db.data);
+//  dim3 blocks(BSZ * BSZ);
+//  dim3 tpb(TSZ * TSZ);
+//  add_block1<<< blocks, tpb >>>(dc.data, da.data, db.data);
 
 //  dim3 blocks(BSZ * BSZ / 4);
 //  dim3 tpb(TSZ * TSZ);
 //  add_block2<<< blocks, tpb >>>(dc.data, da.data, db.data);
+
+//  dim3 tpb2(1024);
+//  dim3 blocks2(4096 / 2);
+//  add_block2<<< blocks2, tpb2 >>>(dc.data, da.data, db.data);
+
+  dim3 tpb3(256);
+  dim3 blocks3(BSZ * BSZ * TSZ * TSZ / 256 / 4);
+  add_block3<<< blocks3, tpb3 >>>(dc.data, da.data, db.data, BSZ * BSZ * TSZ * TSZ);
 
   cudaMemcpy(c.data, dc.data, sizeof(double) * c.rows * c.cols, cudaMemcpyDeviceToHost);
 
