@@ -125,17 +125,38 @@ struct SSA {
   std::vector<Instr> instructions;
   SSAcontext         context;
 
-  void merge(SSA& os){
-    for (auto& instr : os.instructions){
-      const SSAregData& ddat = os.context.lookup(instr.mDst);
-      const SSAregData& s1dat = os.context.lookup(instr.mSrc1);
-      const SSAregData& s2dat = os.context.lookup(instr.mSrc2);
+  RegName merge(SSA& os){
+    std::unordered_map<RegName, RegName, RegNameHash> merge_map;
 
-      RegName new_dst = context.gen(ddat);
-      RegName new_s1  = context.gen(s1dat);
-      RegName new_s2  = context.gen(s2dat);
-      instructions.emplace_back(Instr(instr.mType, new_dst, new_s1, new_s2));
+    class RegNameMerger {
+      std::unordered_map<RegName, RegName, RegNameHash>& merge_map;
+      SSAcontext&                                        old_context;
+      SSAcontext&                                        new_context;
+    public:
+      RegNameMerger(std::unordered_map<RegName, RegName, RegNameHash>& mm, SSAcontext& oc, SSAcontext& nc):
+        merge_map(mm), old_context(oc), new_context(nc) {}
+      RegName operator()(RegName old_name){
+        RegName ret;
+        std::unordered_map<RegName, RegName, RegNameHash>::iterator it = merge_map.find(old_name);
+        if (it == merge_map.end()){
+          const SSAregData& dat = old_context.lookup(old_name);
+          ret = new_context.gen(dat);
+          merge_map.insert(std::make_pair(old_name, ret));
+        } else {
+          ret = (*it).second;
+        }
+        return ret;
+      }
+    } merge_name(merge_map, os.context, context);
+
+    for (auto& instr : os.instructions){
+      RegName new_s1 = merge_name(instr.mSrc1);
+      RegName new_s2 = merge_name(instr.mSrc2);
+      RegName new_d  = merge_name(instr.mDst);
+      instructions.emplace_back(Instr(instr.mType, new_d, new_s1, new_s2));
     }
+    RegName retname = instructions.back().mDst;
+    return retname;
   }
 };
 
@@ -147,17 +168,18 @@ template <> RegName to_ssa(std::shared_ptr<SSA> ret, const MtxBase<MtxRef>& expr
   const Mtx& mtx = cexpr.mtx();
   //friend of Mtx class, update mtx's SSA instructions
   if (mtx.mSSA){
-    (*ret).merge(*mtx.mSSA);
+    RegName retname = (*ret).merge(*mtx.mSSA);
     mtx.swap_ssa(ret);
-  }
-  return (*ret).context.gen(&mtx, mtx.rows(), mtx.cols());
+    return retname;
+  } else
+    return (*ret).context.gen(&mtx, mtx.rows(), mtx.cols());
 }
 template <> RegName to_ssa(std::shared_ptr<SSA> ret, const MtxBase<Scl>& expr){
   return (*ret).context.gen(static_cast<const Scl&>(expr).val());
 }
 template <typename X> RegName to_ssa(std::shared_ptr<SSA> ret, const MtxBase<Uop<TrnOp, X>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Uop<TrnOp, X>&>(expr).param());
-  SSAregData& p1dat = (*ret).context.lookup(p1);
+  const SSAregData& p1dat = (*ret).context.lookup(p1);
   RegName p2;
   RegName dst = (*ret).context.gen(nullptr, p1dat.mCols, p1dat.mRows);
   (*ret).instructions.emplace_back(Instr(InstrType::Trn, dst, p1, p2));
@@ -166,10 +188,10 @@ template <typename X> RegName to_ssa(std::shared_ptr<SSA> ret, const MtxBase<Uop
 template <typename X, typename Y> RegName to_ssa(std::shared_ptr<SSA> ret, const MtxBase<Bop<AddOp, X, Y>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Bop<AddOp, X, Y>&>(expr).param1());
   RegName p2 = to_ssa(ret, static_cast<const Bop<AddOp, X, Y>&>(expr).param2());
-  SSAregData& p1dat = (*ret).context.lookup(p1);
-  SSAregData& p2dat = (*ret).context.lookup(p2);
+  const SSAregData& p1dat = (*ret).context.lookup(p1);
+  const SSAregData& p2dat = (*ret).context.lookup(p2);
 
-  assert(p1dat.mRows == p2dat.mRows || (p1dat.mRows == 1 && p1dat.mCols == 1 || p2dat.mRows == 1 && p2dat.mCols == 1));
+  assert(p1dat.mRows == p2dat.mRows || ((p1dat.mRows == 1 && p1dat.mCols == 1) || (p2dat.mRows == 1 && p2dat.mCols == 1)));
 
   RegName dst = (*ret).context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
 
@@ -182,8 +204,8 @@ template <typename X, typename Y> RegName to_ssa(std::shared_ptr<SSA> ret, const
 template <typename X, typename Y> RegName to_ssa(std::shared_ptr<SSA> ret, const MtxBase<Bop<SubOp, X, Y>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Bop<SubOp, X, Y>&>(expr).param1());
   RegName p2 = to_ssa(ret, static_cast<const Bop<SubOp, X, Y>&>(expr).param2());
-  SSAregData& p1dat = (*ret).context.lookup(p1);
-  SSAregData& p2dat = (*ret).context.lookup(p2);
+  const SSAregData& p1dat = (*ret).context.lookup(p1);
+  const SSAregData& p2dat = (*ret).context.lookup(p2);
 
   assert(p1dat.mRows == p2dat.mRows || (p1dat.mRows == 1 && p1dat.mCols == 1 || p2dat.mRows == 1 && p2dat.mCols == 1));
 
@@ -200,8 +222,8 @@ template <typename X, typename Y> RegName to_ssa(std::shared_ptr<SSA> ret, const
 template <typename X, typename Y> RegName to_ssa(std::shared_ptr<SSA> ret, const MtxBase<Bop<MulOp, X, Y>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Bop<MulOp, X, Y>&>(expr).param1());
   RegName p2 = to_ssa(ret, static_cast<const Bop<MulOp, X, Y>&>(expr).param2());
-  SSAregData& p1dat = (*ret).context.lookup(p1);
-  SSAregData& p2dat = (*ret).context.lookup(p2);
+  const SSAregData& p1dat = (*ret).context.lookup(p1);
+  const SSAregData& p2dat = (*ret).context.lookup(p2);
 
   assert(p1dat.mRows == p2dat.mRows || (p1dat.mRows == 1 && p1dat.mCols == 1 || p2dat.mRows == 1 && p2dat.mCols == 1));
 
@@ -216,8 +238,8 @@ template <typename X, typename Y> RegName to_ssa(std::shared_ptr<SSA> ret, const
 template <typename X, typename Y> RegName to_ssa(std::shared_ptr<SSA> ret, const MtxBase<Bop<DivOp, X, Y>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Bop<DivOp, X, Y>&>(expr).param1());
   RegName p2 = to_ssa(ret, static_cast<const Bop<DivOp, X, Y>&>(expr).param2());
-  SSAregData& p1dat = (*ret).context.lookup(p1);
-  SSAregData& p2dat = (*ret).context.lookup(p2);
+  const SSAregData& p1dat = (*ret).context.lookup(p1);
+  const SSAregData& p2dat = (*ret).context.lookup(p2);
 
   assert(p1dat.mRows == p2dat.mRows || (p1dat.mRows == 1 && p1dat.mCols == 1 || p2dat.mRows == 1 && p2dat.mCols == 1));
 
@@ -234,8 +256,8 @@ template <typename X, typename Y> RegName to_ssa(std::shared_ptr<SSA> ret, const
 template <typename X, typename Y> RegName to_ssa(std::shared_ptr<SSA> ret, const MtxBase<Bop<DotOp, X, Y>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Bop<DotOp, X, Y>&>(expr).param1());
   RegName p2 = to_ssa(ret, static_cast<const Bop<DotOp, X, Y>&>(expr).param2());
-  SSAregData& p1dat = (*ret).context.lookup(p1);
-  SSAregData& p2dat = (*ret).context.lookup(p2);
+  const SSAregData& p1dat = (*ret).context.lookup(p1);
+  const SSAregData& p2dat = (*ret).context.lookup(p2);
 
   assert(p1dat.mCols == p2dat.mRows);
 
@@ -323,7 +345,7 @@ template <typename CRTP>
 std::shared_ptr<SSA> to_ssa(const MtxBase<CRTP>& expr, Mtx& dst){
   std::shared_ptr<SSA> ret(new SSA());
   RegName dname = to_ssa(ret, expr);
-  SSAregData& ddat = (*ret).context.lookup(dname);
+  const SSAregData& ddat = (*ret).context.lookup(dname);
   size_t new_rowstride = roundup_row(ddat.mRows);
   size_t new_colstride = roundup_col(ddat.mCols);
 

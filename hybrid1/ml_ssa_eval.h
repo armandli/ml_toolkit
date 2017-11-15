@@ -496,13 +496,26 @@ void release_ssa(MemInstrContext& ctx){
 }
 
 void memvaluateSSA(std::shared_ptr<SSA> ssa, MemArena& arena){
+//  //GOTHERE
+//  std::cout << *ssa;
+
+  //TODO: optimize given SSA: dead code elimination etc
+
   RegSize regsize = estimate_register_size(ssa);
   std::vector<LiveSet> liveness = analyze_liveness(ssa);
   size_t minregs = estimate_cpu_local_registers(ssa, liveness);
   arena.reset(regsize.rs * regsize.cs, minregs);
   MemInstrContext context(arena, regsize, minregs);
 
+//  //GOTHERE
+//  std::cout << "temps: " << minregs << std::endl;
+
   std::vector<Instr> instr = local_register_allocation(ssa, context, liveness);
+
+//  //GOTHERE
+//  for (size_t i = 0; i < instr.size(); ++i)
+//    std::cout << instr[i];
+
   evaluate_cpu_instr(instr, context);
   release_ssa(context);
 }

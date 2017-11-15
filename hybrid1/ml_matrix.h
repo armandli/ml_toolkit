@@ -17,6 +17,7 @@ namespace CUDA {
 
 template <typename CRTP> struct MtxBase;
 class RegName;
+class Instr;
 class SSA;
 class MemArena;
 class CUDArena;
@@ -60,9 +61,6 @@ class Mtx {
   friend void release_ssa(MemInstrContext&);
   friend void evaluate_cpu_instr(const std::vector<Instr>&, MemInstrContext&);
 public:
-  Mtx(const Mtx& o) = delete;
-  Mtx& operator=(const Mtx& o) = delete;
-
   Mtx(): mData(nullptr), mRows(0), mCols(0), mRowStride(0), mColStride(0), mSSA() {}
   Mtx(size_t r, size_t c, double v = 0.):
     mData(nullptr), mRows(r), mCols(c), mRowStride(roundup_row(r)), mColStride(roundup_col(c)), mSSA(){
@@ -88,7 +86,8 @@ public:
     in.close();
   }
   template <typename CRTP>
-  Mtx(MtxBase<CRTP>&& expr){
+  Mtx(MtxBase<CRTP>&& expr):
+    mData(nullptr), mRows(0), mCols(0), mRowStride(0), mColStride(0) {
     //to_ssa is friend, and modifies this matrix's data
     mSSA = to_ssa(expr, *this);
   }

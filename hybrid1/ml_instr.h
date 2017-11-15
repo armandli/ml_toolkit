@@ -56,6 +56,39 @@ struct Instr {
     mType(type), mDst(dst), mSrc1(src1), mSrc2(src2) {}
 };
 
+std::ostream& operator << (std::ostream& out, const Instr& instr){
+  out << instr.mDst << " <- ";
+  switch (instr.mType){
+    case InstrType::Trn:
+      out << "~";
+    break;
+    default:;
+  }
+  out << instr.mSrc1;
+  switch (instr.mType){
+    case InstrType::Add: case InstrType::AddMC:
+      out << " + " << instr.mSrc2 << "\n";
+    break;
+    case InstrType::Sub: case InstrType::SubMC: case InstrType::SubCM:
+      out << " - " << instr.mSrc2 << "\n";
+    break;
+    case InstrType::EMul: case InstrType::EMulMC:
+      out << " * " << instr.mSrc2 << "\n";
+    break;
+    case InstrType::EDiv: case InstrType::EDivMC: case InstrType::EDivCM:
+      out << " / " << instr.mSrc2 << "\n";
+    break;
+    case InstrType::Dot:
+      out << " ^ " << instr.mSrc2 << "\n";
+    break;
+    case InstrType::Trn:
+      out << "\n";
+    break;
+    default:;
+  }
+  return out;
+}
+
 } //ML
 
 #endif//ML_INSTR

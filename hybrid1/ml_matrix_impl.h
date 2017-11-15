@@ -19,7 +19,7 @@ void Mtx::evaluate(MemArena& arena){
   memvaluateSSA(mSSA, arena);
 }
 
-void Mtx::evaluate(CUDA::CUDArena& arena){
+void Mtx::evaluate(CUDA::CUDArena&){
   //TODO
 }
 
