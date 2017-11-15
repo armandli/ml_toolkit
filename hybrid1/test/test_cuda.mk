@@ -12,10 +12,10 @@ LIBS=-lgtest -lgtest_main -lopenblas -lpthread -lcurand -lcublas
 
 # Compiler flags
 CPPFLAGS += $(foreach includedir,$(program_INCLUDE_DIRS),-I$(includedir))
-CXXFLAGS += -std=c++11 -O3 -g -MD -Wall -Wextra -pthread -pedantic -march=native -mfpmath=sse $(LIBS)
+CXXFLAGS += -std=c++14 -O3 -g -MD -Wall -Wextra -pthread -pedantic -march=native -mfpmath=sse $(LIBS)
 
 GEN_SM61 := -gencode=arch=compute_61,code=\"sm_61,compute_61\" #Target CC 3.5, for example
-NVFLAGS :=-std=c++11 -O3 -rdc=true $(LIBS) #rdc=true needed for separable compilation
+NVFLAGS :=-std=c++14 -O3 -rdc=true $(LIBS) #rdc=true needed for separable compilation
 NVFLAGS += $(GEN_SM61)
 NVFLAGS += $(foreach includedir,$(program_CU_INCLUDE_DIRS),-I$(includedir))
 

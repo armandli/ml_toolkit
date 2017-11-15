@@ -29,8 +29,8 @@ TEST(SSE, ConstInitBlock){
   double* expected2 = new double[MTX_BLOCK_RSZ * 10 * 10];
   size_t blksz = 20;
 
-  const_init_block_pd(buffer1, 10., 17, 18, blksz, blksz);
-  const_init_block_pd(buffer2, 33., 20, 20, blksz, blksz);
+  const_init_2d_sse_pd(buffer1, 10., 17, 18, blksz, blksz);
+  const_init_2d_sse_pd(buffer2, 33., 20, 20, blksz, blksz);
 
   for (size_t i = 0; i < 20; ++i)
     for (size_t j = 0; j < 20; ++j){
@@ -75,9 +75,9 @@ TEST(SSE, TransposeBlock){
     expected3[i] = (double)i;
   }
 
-  transpose_block4x4_pd(dst1, buffer1, 16, 16);
-  transpose_block4x4_pd(dst2, buffer2, 4, 12);
-  transpose_block4x4_pd(dst3, buffer3, 12, 4);
+  transpose4x4_2d_sse_pd(dst1, buffer1, 16, 16);
+  transpose4x4_2d_sse_pd(dst2, buffer2, 4, 12);
+  transpose4x4_2d_sse_pd(dst3, buffer3, 12, 4);
 
   for (size_t i = 0; i < 16; ++i)
     for (size_t j = 0; j < 16; ++j)
@@ -154,8 +154,8 @@ TEST_F(SSESimpleOperation, AddBlock){
     for (size_t j = 0; j < 4; ++j)
       expected2[i * 4 + j] = i * 4 + j + j * 4 + i;
 
-  add_block_pd(buffer1, buffer1, buffer2, 24, 24);
-  add_block_pd(buffer3, buffer3, buffer4, 8, 4);
+  add_1d_sse_pd(buffer1, buffer1, buffer2, 24, 24);
+  add_1d_sse_pd(buffer3, buffer3, buffer4, 8, 4);
 
   EXPECT_TRUE(0 == memcmp(buffer1, expected1, sizeof(double) * 24 * 24));
   EXPECT_TRUE(0 == memcmp(buffer3, expected2, sizeof(double) * 8 * 4));
@@ -167,7 +167,7 @@ TEST_F(SSESimpleOperation, AddConst){
     for (size_t j = 0; j < 24; ++j)
       expected1[i * 24 + j] = i * 24 + j + b;
 
-  add_block_pd(buffer1, buffer1, b, 24, 24, 24);
+  add_const_2d_sse_pd(buffer1, buffer1, b, 24, 24, 24);
 
   EXPECT_TRUE(0 == memcmp(buffer1, expected1, sizeof(double) * 24 * 24));
 }
@@ -181,8 +181,8 @@ TEST_F(SSESimpleOperation, SubBlock){
     for (size_t j = 0; j < 4; ++j)
       expected2[i * 4 + j] = ((double)i * 4 + j) - ((double)j * 4 + i);
 
-  sub_block_pd(buffer1, buffer1, buffer2, 24, 24);
-  sub_block_pd(buffer3, buffer3, buffer4, 8, 4);
+  sub_1d_sse_pd(buffer1, buffer1, buffer2, 24, 24);
+  sub_1d_sse_pd(buffer3, buffer3, buffer4, 8, 4);
 
   EXPECT_TRUE(0 == memcmp(buffer1, expected1, sizeof(double) * 24 * 24));
   EXPECT_TRUE(0 == memcmp(buffer3, expected2, sizeof(double) * 8 * 4));
@@ -194,7 +194,7 @@ TEST_F(SSESimpleOperation, SubConst1){
     for (size_t j = 0; j < 24; ++j)
       expected1[i * 24 + j] = ((double)i * 24 + j) - b;
 
-  sub_block_pd(buffer1, buffer1, b, 24, 24, 24);
+  sub_mc_2d_sse_pd(buffer1, buffer1, b, 24, 24, 24);
   EXPECT_TRUE(0 == memcmp(buffer1, expected1, sizeof(double) * 24 * 24));
 }
 
@@ -204,7 +204,7 @@ TEST_F(SSESimpleOperation, SubConst2){
     for (size_t j = 0; j < 24; ++j)
       expected1[i * 24 + j] = b - ((double)i * 24 + j);
 
-  sub_block_pd(b, buffer1, buffer1, 24, 24, 24);
+  sub_cm_2d_sse_pd(b, buffer1, buffer1, 24, 24, 24);
   EXPECT_TRUE(0 == memcmp(buffer1, expected1, sizeof(double) * 24 * 24));
 }
 
@@ -217,8 +217,8 @@ TEST_F(SSESimpleOperation, ElemMulBlock){
     for (size_t j = 0; j < 4; ++j)
       expected2[i * 4 + j] = (i * 4 + j) * (j * 4 + i);
 
-  emul_block_pd(buffer1, buffer1, buffer2, 24, 24);
-  emul_block_pd(buffer3, buffer3, buffer4, 8, 4);
+  emul_1d_sse_pd(buffer1, buffer1, buffer2, 24, 24);
+  emul_1d_sse_pd(buffer3, buffer3, buffer4, 8, 4);
 
   EXPECT_TRUE(0 == memcmp(buffer1, expected1, sizeof(double) * 24 * 24));
   EXPECT_TRUE(0 == memcmp(buffer3, expected2, sizeof(double) * 8 * 4));
@@ -230,7 +230,7 @@ TEST_F(SSESimpleOperation, ElemMulConst){
     for (size_t j = 0; j < 24; ++j)
       expected1[i * 24 + j] = (i * 24 + j) * b;
 
-  emul_block_pd(buffer1, buffer1, b, 24, 24);
+  emul_const_2d_sse_pd(buffer1, buffer1, b, 24, 24);
   EXPECT_TRUE(0 == memcmp(buffer1, expected1, sizeof(double) * 24 * 24));
 }
 
@@ -243,8 +243,8 @@ TEST_F(SSESimpleOperation, ElemDivBlock){
     for (size_t j = 0; j < 4; ++j)
       expected2[i * 4 + j] = ((double)i * 4 + j) / ((double)j * 4 + i);
 
-  ediv_block_pd(buffer1, buffer1, buffer2, 24, 24, 24);
-  ediv_block_pd(buffer3, buffer3, buffer4, 8, 4, 4);
+  ediv_2d_sse_pd(buffer1, buffer1, buffer2, 24, 24, 24);
+  ediv_2d_sse_pd(buffer3, buffer3, buffer4, 8, 4, 4);
 
   EXPECT_TRUE(0 == memcmp(buffer1, expected1, sizeof(double) * 24 * 24));
   EXPECT_TRUE(0 == memcmp(buffer3, expected2, sizeof(double) * 8 * 4));
@@ -257,7 +257,7 @@ TEST_F(SSESimpleOperation, ElemDivConst1){
       expected1[i * 24 + j] = ((double)i * 24 + j) / b;
 
 
-  ediv_block_pd(buffer1, buffer1, b, 24, 24, 24);
+  ediv_mc_2d_sse_pd(buffer1, buffer1, b, 24, 24, 24);
   EXPECT_TRUE(0 == memcmp(buffer1, expected1, sizeof(double) * 24 * 24));
 }
 
@@ -267,7 +267,7 @@ TEST_F(SSESimpleOperation, ElemDivConst2){
     for (size_t j = 0; j < 24; ++j)
       expected1[i * 24 + j] = b / ((double)i * 24 + j);
 
-  ediv_block_pd(b, buffer1, buffer1, 24, 24, 24);
+  ediv_cm_2d_sse_pd(b, buffer1, buffer1, 24, 24, 24);
   EXPECT_TRUE(0 == memcmp(buffer1, expected1, sizeof(double) * 24 * 24));
 }
 
@@ -337,8 +337,8 @@ TEST_F(SSEComplexReduction, MaxRowCoeffs){
     expected2[ir] = max;
   }
 
-  max_row_coeffs_pd(buffer2, buffer1, 24, 21, 24);
-  max_row_coeffs_pd(buffer4, buffer3, 16, 23, 24);
+  max_row_coeffs_2d_sse_pd(buffer2, buffer1, 24, 21, 24);
+  max_row_coeffs_2d_sse_pd(buffer4, buffer3, 16, 23, 24);
 
   EXPECT_TRUE(0 == memcmp(buffer2, expected1, sizeof(double) * 24));
   EXPECT_TRUE(0 == memcmp(buffer4, expected2, sizeof(double) * 16));
@@ -369,8 +369,8 @@ TEST_F(SSEComplexReduction, MinRowCoeffs){
     expected2[ir] = min;
   }
 
-  min_row_coeffs_pd(buffer2, buffer1, 24, 21, 24);
-  min_row_coeffs_pd(buffer4, buffer3, 16, 23, 24);
+  min_row_coeffs_2d_sse_pd(buffer2, buffer1, 24, 21, 24);
+  min_row_coeffs_2d_sse_pd(buffer4, buffer3, 16, 23, 24);
 
   EXPECT_TRUE(0 == memcmp(buffer2, expected1, sizeof(double) * 24));
   EXPECT_TRUE(0 == memcmp(buffer4, expected2, sizeof(double) * 16));
@@ -399,8 +399,8 @@ TEST_F(SSEComplexReduction, SumRows){
     expected2[ir] = s;
   }
 
-  sum_rows_pd(buffer2, buffer1, 24, 24);
-  sum_rows_pd(buffer4, buffer3, 16, 24);
+  sum_rows_2d_sse_pd(buffer2, buffer1, 24, 24);
+  sum_rows_2d_sse_pd(buffer4, buffer3, 16, 24);
 
   for (size_t i = 0; i < 24; ++i)
     EXPECT_NEAR(buffer2[i], expected1[i], 0.00000001);
@@ -419,7 +419,7 @@ TEST_F(SSEComplexReduction, SumAll){
     for (size_t ic = 0; ic < 21; ++ic)
       expected += buffer1[ir * 24 + ic];
 
-  double t = sum_all_pd(buffer1, 24, 24);
+  double t = sum_all_1d_sse_pd(buffer1, 24, 24);
 
   EXPECT_NEAR(expected, t, 0.00000001);
 }
@@ -433,7 +433,7 @@ TEST_F(SSEComplexReduction, Sigmoid){
     for (size_t ic = 0; ic < 21; ++ic)
       expected1[ir * 24 + ic] = 1. / (1. + exp(buffer1[ir * 24 + ic] * -1.));
 
-  sigmoid_pd(buffer2, buffer1, 24, 21, 24);
+  sigmoid_2d_sse_pd(buffer2, buffer1, 24, 21, 24);
 
   for (size_t ir = 0; ir < 24; ++ir)
     for (size_t ic = 0; ic < 21; ++ic)
@@ -449,7 +449,7 @@ TEST_F(SSEComplexReduction, Tanh){
     for (size_t ic = 0; ic < 21; ++ic)
       expected1[ir * 24 + ic] = tanh(buffer1[ir * 24 + ic]);
 
-  tanh_pd(buffer2, buffer1, 24, 24);
+  tanh_1d_sse_pd(buffer2, buffer1, 24, 24);
 
   for (size_t ir = 0; ir < 24; ++ir)
     for (size_t ic = 0; ic < 21; ++ic)
@@ -465,7 +465,7 @@ TEST_F(SSEComplexReduction, Relu){
     for (size_t ic = 0; ic < 21; ++ic)
       expected1[ir * 24 + ic] = buffer1[ir * 24 + ic] > 0. ? buffer1[ir * 24 + ic] : 0.;
 
-  relu_pd(buffer2, buffer1, 24, 24);
+  relu_1d_sse_pd(buffer2, buffer1, 24, 24);
 
   for (size_t ir = 0; ir < 24; ++ir)
     for (size_t ic = 0; ic < 21; ++ic)
@@ -483,7 +483,7 @@ TEST_F(SSEComplexReduction, Drelu){
     for (size_t ic = 0; ic < 21; ++ic)
       expected1[ir * 24 + ic] = buffer5[ir * 24 + ic] > 0. ? buffer1[ir * 24 + ic] : 0.;
 
-  drelu_pd(buffer2, buffer1, buffer5, 24, 24);
+  drelu_1d_sse_pd(buffer2, buffer1, buffer5, 24, 24);
 
   for (size_t ir = 0; ir < 24; ++ir)
     for (size_t ic = 0; ic < 21; ++ic)
@@ -502,7 +502,7 @@ TEST_F(SSEComplexReduction, L2Loss){
       expected += buffer1[ir * 24 + ic] * buffer1[ir * 24 + ic];
   expected = expected * 0.5 * reg;
 
-  double res = loss_l2_pd(buffer1, reg, 24, 24);
+  double res = loss_l2_1d_sse_pd(buffer1, reg, 24, 24);
 
   EXPECT_NEAR(res, expected, 0.00000001);
 }
@@ -520,7 +520,7 @@ TEST_F(SSEComplexReduction, Softmax){
       expected1[ir * 24 + ic] = exp(buffer1[ir * 24 + ic]) / s;
   }
 
-  softmax_r_pd(buffer2, buffer1, 24, 24);
+  softmax_r_2d_sse_pd(buffer2, buffer1, 24, 24);
   
   for (size_t ir = 0; ir < 24; ++ir)
     for (size_t ic = 0; ic < 21; ++ic)
@@ -542,7 +542,7 @@ TEST_F(SSEComplexReduction, MSELoss){
     }
   s /= 24.;
 
-  double r = mse_loss_pd(buffer1, buffer5, 24, 24);
+  double r = mse_loss_1d_sse_pd(buffer1, buffer5, 24, 24);
 
   EXPECT_NEAR(r, s, 0.00000001);
 }
@@ -561,7 +561,7 @@ TEST_F(SSEComplexReduction, Deriviative){
       expected1[ir * 24 + ic] = v;
     }
 
-  deriviative_row_pd(buffer2, buffer1, buffer5, 24, 24);
+  deriviative_row_1d_sse_pd(buffer2, buffer1, buffer5, 24, 24);
 
   for (size_t ir = 0; ir < 24; ++ir)
     for (size_t ic = 0; ic < 24; ++ic)
@@ -577,8 +577,8 @@ TEST_F(SSEComplexReduction, CompareEqual){
       buffer2[ir * 24 + ic] = random_double();
     }
 
-  EXPECT_TRUE(block_cmp_equal_pd(buffer1, buffer5, 0.0000001, 24, 24));
-  EXPECT_FALSE(block_cmp_equal_pd(buffer1, buffer2, 0.0000001, 24, 24));
+  EXPECT_TRUE(block_cmp_equal_1d_sse_pd(buffer1, buffer5, 0.0000001, 24, 24));
+  EXPECT_FALSE(block_cmp_equal_1d_sse_pd(buffer1, buffer2, 0.0000001, 24, 24));
 
   for (size_t ir = 0; ir < 24; ++ir)
     for (size_t ic = 0; ic < 21; ++ic){
@@ -586,5 +586,5 @@ TEST_F(SSEComplexReduction, CompareEqual){
       buffer1[ir * 24 + ic] = v;
       buffer5[ir * 24 + ic] = v - 0.00000001;
     }
-  EXPECT_TRUE(block_cmp_equal_pd(buffer1, buffer5, 0.0000001, 24, 24));
+  EXPECT_TRUE(block_cmp_equal_1d_sse_pd(buffer1, buffer5, 0.0000001, 24, 24));
 }

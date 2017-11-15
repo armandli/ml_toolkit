@@ -10,32 +10,19 @@
 #include <curand_kernel.h>
 #include <cublas_v2.h>
 
+#include <ml_cuda_common.cuh>
+
 #define CUDA_CF_OFFSET(n) \
   ((n) >> CUDA_LOG_BANKS)
-
-#ifndef CUDA_FAIL_CONTINUE
-#define CUDA_FAIL_CONTINUE false
-#else
-#undef CUDA_FAIL_CONTINUE
-#define CUDA_FAIL_CONTINUE true
-#endif//CUDA_FAIL_CONTINUE
-#define CUDADBG(call) SPPL::gassert((call), __FILE__, __LINE__, CUDA_FAIL_CONTINUE)
 
 //TODO: more meaningful cukernel function names that indicate if it's 1D or 2D, and sum could be row sum, entire matrix sum, or col sum, need to clarify
 //TODO: temporary buffer estimators for algorithm requiring additional device memory
 //TODO: correctly handle column size smaller than 32 -> could lead to gpu compute block size to go wrong when also using slice size
+//TODO: with sub-matrix, we are forced to do all cuda operations in 2D operations, need each 1D operation a 2D alternative
 
 namespace ML {
 namespace CUDA {
-
 namespace SPPL {
-
-inline void gassert(cudaError_t code, const char *file, int line, bool cont){
-  if (code != cudaSuccess){
-    fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
-    if (not cont) exit(code);
-  }
-}
 
 __device__ size_t cuda_cf_offset(size_t n){
   return (n >> CUDA_LOG_BANKS);
@@ -1613,7 +1600,7 @@ void deriviative_row_1d_cuda_pd(double* dst, const double* o, const double* y, s
   deriviative_row_1d_cukernel_pd<<< blocks, tpb >>>(dst, o, y, (double)rows, rsize);
 }
 
-} //ML
 } //CUDA
+} //ML
 
 #endif//ML_CUDA

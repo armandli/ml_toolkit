@@ -27,6 +27,11 @@ std::default_random_engine& get_default_random_engine(){
   return eng;
 }
 
+enum class RandomizationType : unsigned {
+  Uniform,
+  Gaussian,
+};
+
 constexpr size_t roundup_row(size_t v){
   return (v & ~MTX_BLOCK_RMASK) + (v & MTX_BLOCK_RMASK ? MTX_BLOCK_RSZ : 0UL);
 }
@@ -65,6 +70,40 @@ BlkSz get_gpu_block_size(size_t rowstride, size_t colstride){
   dc /= order;
 
   return (BlkSz){dr, dc};
+}
+
+constexpr size_t gpu_size_threshold = 8000000UL;
+
+constexpr bool is_gpu_optimized(size_t byte_size){
+  return byte_size >= gpu_size_threshold;
+}
+
+enum ExprEvalEnv : unsigned {
+  CPUExecution,
+  GPUExecution,
+};
+
+constexpr size_t MIN_GPU_SIZE = 1000000;
+
+struct RegSize {
+  size_t rs;
+  size_t cs;
+};
+bool operator == (const RegSize& a, const RegSize& b){
+  return a.rs == b.rs && a.cs == b.cs;
+}
+bool operator != (const RegSize& a, const RegSize& b){
+  return !(a == b);
+}
+bool operator < (const RegSize& a, const RegSize& b){
+  if (a.rs < b.rs)                      return true;
+  else if (a.rs == b.rs && a.cs < b.cs) return true;
+  else                                  return false;
+}
+
+ExprEvalEnv det_execution_env(RegSize maxSize){
+  if (maxSize.rs * maxSize.cs >= MIN_GPU_SIZE) return GPUExecution;
+  else                                         return CPUExecution;
 }
 
 } //ML
