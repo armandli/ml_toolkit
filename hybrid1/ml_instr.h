@@ -52,6 +52,7 @@ struct Instr {
   RegName   mSrc1;
   RegName   mSrc2;
 
+  Instr() = default;
   Instr(InstrType type, RegName dst, RegName src1, RegName src2):
     mType(type), mDst(dst), mSrc1(src1), mSrc2(src2) {}
 };

@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include <queue>
+#include <unordered_map>
 #include <algorithm>
 
 #include <cblas.h>
@@ -16,7 +17,62 @@
 
 namespace ML {
 
-//TODO: do local instruction consolidation on SSA, this includes dead code elimination
+bool operator == (const Instr& a, const Instr& b){
+  return a.mType == b.mType && a.mSrc1 == b.mSrc1 && a.mSrc2 == b.mSrc2;
+}
+
+struct LocalValueNumberHash {
+  size_t operator()(const Instr& instr) const noexcept {
+    unsigned long long ret = 0;
+    char*              pr  = (char*)&ret;
+    switch (instr.mType){
+      case InstrType::Add:    pr[0] = 0; break;
+      case InstrType::Sub:    pr[0] = 1; break;
+      case InstrType::EMul:   pr[0] = 2; break;
+      case InstrType::EDiv:   pr[0] = 3; break;
+      case InstrType::Dot:    pr[0] = 4; break;
+      case InstrType::AddMC:  pr[0] = 5; break;
+      case InstrType::SubMC:  pr[0] = 6; break;
+      case InstrType::SubCM:  pr[0] = 7; break;
+      case InstrType::EMulMC: pr[0] = 8; break;
+      case InstrType::EDivMC: pr[0] = 9; break;
+      case InstrType::EDivCM: pr[0] = 10; break;
+      case InstrType::Trn:    pr[0] = 11; break;
+      default: assert(false);
+    }
+    memcpy(pr + 1, instr.mSrc1.name + 1, RegName::Len - 1);
+    memcpy(pr + RegName::Len, instr.mSrc2.name + 1, RegName::Len - 1);
+
+    return (size_t) ret; //DOES NOT WORK on 32bit systems!
+  }
+};
+
+//benefits:
+//  eliminate dead code
+void local_value_numbering(std::shared_ptr<SSA> ssa){
+  std::unordered_map<Instr, RegName, LocalValueNumberHash> vn;
+  std::unordered_map<RegName, RegName, RegNameHash>        as;
+  std::vector<Instr>                                       nins;
+  for (auto& instr : (*ssa).instructions){
+    Instr recon;
+    recon.mType = instr.mType;
+    decltype(as)::iterator rs1 = as.find(instr.mSrc1);
+    decltype(as)::iterator rs2 = as.find(instr.mSrc2);
+    if (rs1 != as.end()) recon.mSrc1 = (*rs1).second;
+    else                 recon.mSrc1 = instr.mSrc1;
+    if (rs2 != as.end()) recon.mSrc2 = (*rs2).second;
+    else                 recon.mSrc2 = instr.mSrc2;
+
+    decltype(vn)::iterator f = vn.find(recon);
+    if (f == vn.end()){
+      recon.mDst = instr.mDst;
+      vn.insert(std::make_pair(recon, instr.mDst));
+      nins.emplace_back(recon);
+    } else
+      as.insert(std::make_pair(instr.mDst, (*f).second));
+  }
+  (*ssa).instructions = nins;
+}
 
 RegSize estimate_register_size(std::shared_ptr<SSA> ssa){
   RegSize largest = {0UL, 0UL};
@@ -496,10 +552,16 @@ void release_ssa(MemInstrContext& ctx){
 }
 
 void memvaluateSSA(std::shared_ptr<SSA> ssa, MemArena& arena){
-//  //GOTHERE
-//  std::cout << *ssa;
+  //GOTHERE
+  std::cout << "Before Optimization: " << std::endl;
+  std::cout << *ssa;
 
   //TODO: optimize given SSA: dead code elimination etc
+  local_value_numbering(ssa);
+
+  //GOTHERE
+  std::cout << "After Optimization: " << std::endl;
+  std::cout << *ssa;
 
   RegSize regsize = estimate_register_size(ssa);
   std::vector<LiveSet> liveness = analyze_liveness(ssa);
@@ -512,9 +574,10 @@ void memvaluateSSA(std::shared_ptr<SSA> ssa, MemArena& arena){
 
   std::vector<Instr> instr = local_register_allocation(ssa, context, liveness);
 
-//  //GOTHERE
-//  for (size_t i = 0; i < instr.size(); ++i)
-//    std::cout << instr[i];
+  //GOTHERE
+  std::cout << "Final Instructions:" << std::endl;
+  for (size_t i = 0; i < instr.size(); ++i)
+    std::cout << instr[i];
 
   evaluate_cpu_instr(instr, context);
   release_ssa(context);
