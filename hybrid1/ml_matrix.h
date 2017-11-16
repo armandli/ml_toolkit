@@ -20,6 +20,7 @@ template <typename CRTP> struct MtxBase;
 class RegName;
 class Instr;
 class SSA;
+class SSAregData;
 class MemArena;
 class MemInstrContext;
 
@@ -52,19 +53,18 @@ class Mtx {
     return mSSA.get() != nullptr;
   }
 
-  void swap_ssa(const std::shared_ptr<SSA>& o) const {
-    mSSA = o;
-  }
-
   double* data() const {
     return mData;
   }
 
-  template <typename CRTP> friend RegName to_ssa(std::shared_ptr<SSA>, const MtxBase<CRTP>&);
-  template <typename CRTP> friend std::shared_ptr<SSA> to_ssa(const MtxBase<CRTP>&, Mtx&);
+  void clear_ssa() const {
+    mSSA.reset();
+  }
+
+  //TODO: clean up these friends
   friend void release_ssa(MemInstrContext&);
   friend void evaluate_cpu_instr(const std::vector<Instr>&, MemInstrContext&);
-  friend class SSA;
+  friend class SSAMtxCommunicator;
 public:
   Mtx(): mData(nullptr), mRows(0), mCols(0), mRowStride(0), mColStride(0), mSSA() {}
   Mtx(size_t r, size_t c, double v = 0.):

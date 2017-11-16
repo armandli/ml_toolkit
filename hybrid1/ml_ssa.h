@@ -134,8 +134,29 @@ public:
 struct SSA {
   std::vector<Instr> instructions;
   SSAcontext         context;
+};
 
-  RegName merge(SSA& os, const Mtx& dmtx){
+//TODO: if every matrix will keep its own copy of SSA block, if it's used in other
+//expression the SSA block gets copied, we don't need to use shared_ptr at all!!!
+using SSABlock = std::shared_ptr<SSA>;
+
+struct SSAMtxCommunicator {
+  static void reset_mtx_size(Mtx& dst, const SSAregData& data){
+    size_t rowstride = roundup_row(data.mRows);
+    size_t colstride = roundup_col(data.mCols);
+    if (dst.mData != nullptr)
+      delete[] dst.mData;
+    dst.mRowStride = rowstride;
+    dst.mColStride = colstride;
+    dst.mData = new double[rowstride * colstride];
+    dst.mRows = data.mRows;
+    dst.mCols = data.mCols;
+  }
+  static RegName merge_instructions(SSA& dst, const Mtx& src){
+    //if there is no SSABlock in src, we're done
+    if (not src.mSSA) return dst.context.gen(&src, src.rows(), src.cols());
+
+    SSA& src_ssa = *src.mSSA;
     std::unordered_map<RegName, RegName, RegNameHash> merge_map;
 
     class RegNameMerger {
@@ -157,28 +178,18 @@ struct SSA {
         }
         return ret;
       }
-    } merge_name(merge_map, os.context, context);
+    } merge_name(merge_map, src_ssa.context, dst.context);
 
-    for (auto& instr : os.instructions){
+    for (auto& instr : src_ssa.instructions){
       RegName new_s1 = merge_name(instr.mSrc1);
       RegName new_s2 = merge_name(instr.mSrc2);
       RegName new_d  = merge_name(instr.mDst);
-      instructions.emplace_back(Instr(instr.mType, new_d, new_s1, new_s2));
+      dst.instructions.emplace_back(Instr(instr.mType, new_d, new_s1, new_s2));
     }
 
-    std::unordered_map<const Mtx*, RegName>::iterator it = context.get_mtxmap().find(&dmtx);
-    assert(it != context.get_mtxmap().end());
+    std::unordered_map<const Mtx*, RegName>::iterator it = dst.context.get_mtxmap().find(&src);
+    assert(it != dst.context.get_mtxmap().end());
     return (*it).second;
-  }
-
-  void replace_old_ssa(std::shared_ptr<SSA> new_ssa){
-    std::unordered_map<const Mtx*, RegName>& mtxes = context.get_mtxmap();
-    for (std::unordered_map<const Mtx*, RegName>::iterator it = mtxes.begin(); it != mtxes.end(); ++it){
-      const Mtx* mtx = (*it).first;
-      if ((*mtx).is_ssa()){
-        (*mtx).swap_ssa(new_ssa);
-      }
-    }
   }
 };
 
@@ -188,12 +199,7 @@ template <typename CRTP> RegName to_ssa(std::shared_ptr<SSA> ret, const MtxBase<
 template <> RegName to_ssa(std::shared_ptr<SSA> ret, const MtxBase<MtxRef>& expr){
   const MtxRef& cexpr = static_cast<const MtxRef&>(expr);
   const Mtx& mtx = cexpr.mtx();
-  //friend of Mtx class, update mtx's SSA instructions
-  if (mtx.mSSA){
-    RegName retname = (*ret).merge(*mtx.mSSA, mtx);
-    return retname;
-  } else
-    return (*ret).context.gen(&mtx, mtx.rows(), mtx.cols());
+  return SSAMtxCommunicator::merge_instructions(*ret, mtx);
 }
 template <> RegName to_ssa(std::shared_ptr<SSA> ret, const MtxBase<Scl>& expr){
   return (*ret).context.gen(static_cast<const Scl&>(expr).val());
@@ -367,20 +373,7 @@ std::shared_ptr<SSA> to_ssa(const MtxBase<CRTP>& expr, Mtx& dst){
   std::shared_ptr<SSA> ret(new SSA());
   RegName dname = to_ssa(ret, expr);
   const SSAregData& ddat = (*ret).context.lookup(dname);
-  size_t new_rowstride = roundup_row(ddat.mRows);
-  size_t new_colstride = roundup_col(ddat.mCols);
-
-  (*ret).replace_old_ssa(ret);
-
-  //friend of Mtx class, update destination matrix memory
-  if (dst.mData != nullptr)
-    delete[] dst.mData;
-  dst.mRowStride = new_rowstride;
-  dst.mColStride = new_colstride;
-  dst.mData = new double[new_rowstride * new_colstride];
-  dst.mRows = ddat.mRows;
-  dst.mCols = ddat.mCols;
-
+  SSAMtxCommunicator::reset_mtx_size(dst, ddat);
   (*ret).context.associate(dname, dst);
   return ret;
 }
@@ -916,8 +909,7 @@ void release_ssa(MemInstrContext& ctx){
   std::unordered_map<const Mtx*, RegName>& outputs = ctx.memMap();
   for (std::unordered_map<const Mtx*, RegName>::iterator it = outputs.begin(); it != outputs.end(); ++it){
     const Mtx* pm = (*it).first;
-    if ((*pm).mSSA)
-      (*pm).mSSA.reset();
+    (*pm).clear_ssa();
   }
 }
 
