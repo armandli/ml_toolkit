@@ -9,7 +9,7 @@
 #include <ml_mtxop.h>
 #include <ml_sse.h>
 #include <ml_exprtree.h>
-#include <ml_ssa_eval_decl.h>
+#include <ml_ssa_decl.h>
 
 namespace ML {
 namespace CUDA {
