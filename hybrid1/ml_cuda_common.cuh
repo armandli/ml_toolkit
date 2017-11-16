@@ -20,8 +20,8 @@ inline void gassert(cudaError_t code, const char *file, int line, bool cont){
   }
 }
 
-}
-}
+} //SPPL
+} //CUDA
 } //ML  
 
 #endif//ML_CUDA_COMMON

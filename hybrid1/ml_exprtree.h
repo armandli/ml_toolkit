@@ -309,7 +309,7 @@ struct DotOp {
 };
 
 Bop<DotOp, MtxRef, Scl> operator^(MtxRef&&, Scl&&){
-  assert(!!!"Matrix multiply cannot be applied to a matrix and a scalar. Please use element wise multiply"); //TODO: why not static_assert
+  assert(!!!"Matrix multiply cannot be applied to a matrix and a scalar. Please use element wise multiply");
 }
 Bop<DotOp, Scl, MtxRef> operator^(Scl&&, MtxRef&&){
   assert(!!!"Matrix multiply cannot be applied to a matrix and a scalar. Please use element wise multiply");

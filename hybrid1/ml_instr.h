@@ -2,6 +2,7 @@
 #define ML_INSTR
 
 #include <algorithm>
+#include <ostream>
 
 namespace ML {
 

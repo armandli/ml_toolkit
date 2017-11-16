@@ -3,12 +3,13 @@
 
 #include <cassert>
 #include <fstream>
-#include <sstream>
 #include <memory>
 
 #include <ml_common.h>
 #include <ml_mtxop.h>
 #include <ml_sse.h>
+#include <ml_exprtree.h>
+#include <ml_ssa_eval_decl.h>
 
 namespace ML {
 namespace CUDA {
@@ -20,7 +21,6 @@ class RegName;
 class Instr;
 class SSA;
 class MemArena;
-class CUDArena;
 class MemInstrContext;
 
 class Mtx {
@@ -48,6 +48,10 @@ class Mtx {
     in.read((char*)mData, sizeof(double) * mRowStride * mColStride);
   }
 
+  bool is_ssa() const {
+    return mSSA.get() != nullptr;
+  }
+
   void swap_ssa(const std::shared_ptr<SSA>& o) const {
     mSSA = o;
   }
@@ -60,6 +64,7 @@ class Mtx {
   template <typename CRTP> friend std::shared_ptr<SSA> to_ssa(const MtxBase<CRTP>&, Mtx&);
   friend void release_ssa(MemInstrContext&);
   friend void evaluate_cpu_instr(const std::vector<Instr>&, MemInstrContext&);
+  friend class SSA;
 public:
   Mtx(): mData(nullptr), mRows(0), mCols(0), mRowStride(0), mColStride(0), mSSA() {}
   Mtx(size_t r, size_t c, double v = 0.):
@@ -106,9 +111,14 @@ public:
     return *this;
   }
 
-  //cannot include definition here due to circular header dependency
-  void evaluate(MemArena& arena);
-  void evaluate(CUDA::CUDArena& anrea);
+  void evaluate(MemArena& arena){
+    if (mSSA.get() == nullptr) return;
+
+    memvaluateSSA(mSSA, arena);
+  }
+  void evaluate(CUDA::CUDArena&){
+    //TODO
+  }
 
   /* accessors */
   size_t rows() const { return mRows; }
