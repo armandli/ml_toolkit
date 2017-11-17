@@ -7,138 +7,22 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <algorithm>
-#include <memory>
 
 #include <cblas.h>
 
 #include <ml_common.h>
 #include <ml_exprtree.h>
 #include <ml_instr.h>
+#include <ml_ssa_decl.h>
 #include <ml_matrix.h>
 #include <ml_arena.h>
 #include <ml_sse.h>
 
 namespace ML {
 
-enum class SSAregType : unsigned {
-  Scl,
-  Mtx,
-  Nil,
-};
-
 //TODO: bug: if a matrix takes an expression and reassign the result to itself, we break SSA rule
 //TODO: currently the SSA are generated based on local block, NN typically include loops, maybe we should consider to moving to multi-block SSA
 //TODO: hide private members of data structures from public use!!!
-
-struct SSAregData {
-  SSAregType mType;
-  const Mtx* mMtxRef;
-  size_t     mRows;
-  size_t     mCols;
-  double     mVal;
-
-  SSAregData(const Mtx* ref, size_t rows, size_t cols):
-    mType(SSAregType::Mtx), mMtxRef(ref), mRows(rows), mCols(cols), mVal(0){}
-  explicit SSAregData(double v):
-    mType(SSAregType::Scl), mMtxRef(nullptr), mRows(0), mCols(0), mVal(v){}
-  SSAregData():
-    mType(SSAregType::Nil), mMtxRef(nullptr), mRows(0), mCols(0), mVal(0.){}
-};
-
-class SSAcontext {
-  std::unordered_map<const Mtx*, RegName>              mMtxMap;
-  std::unordered_map<double, RegName>                  mConstMap;
-  std::unordered_map<RegName, SSAregData, RegNameHash> mRegData;
-  int                                                  mCounter;
-  SSAregData                                           mNil;
-
-  RegName nextName(){
-    assert(mCounter < 1000);
-    RegName ret;
-    sprintf(ret.name, "s%d", mCounter++);
-    return ret;
-  }
-public:
-  SSAcontext(): mCounter(1), mNil(SSAregData()) {}
-
-  RegName gen(const Mtx* mtx, size_t rows, size_t cols){
-    RegName ret;
-    if (mtx == nullptr){
-      ret = nextName();
-      mRegData.insert(std::make_pair(ret, SSAregData(nullptr, rows, cols)));
-    } else if (mMtxMap.find(mtx) != mMtxMap.end()){
-      memcpy(ret.name, mMtxMap[mtx].name, RegName::Len);
-    } else {
-      ret = nextName();
-      mMtxMap.insert(std::make_pair(mtx, ret));
-      mRegData.insert(std::make_pair(ret, SSAregData(mtx, rows, cols)));
-    }
-    return ret;
-  }
-
-  RegName gen(double v){
-    decltype(mConstMap)::const_iterator it = mConstMap.find(v);
-    RegName ret;
-    if (it == mConstMap.end()){
-      ret = nextName();
-      mConstMap.insert(std::make_pair(v, ret));
-      mRegData.insert(std::make_pair(ret, SSAregData(v)));
-    } else {
-      memcpy(ret.name, (*it).second.name, RegName::Len);
-    }
-    return ret;
-  }
-
-  RegName gen(){
-    RegName nil;
-    memcpy(nil.name, "s0\0\0", RegName::Len);
-    return nil;
-  }
-
-  RegName gen(const SSAregData& dat){
-    switch (dat.mType){
-      case SSAregType::Mtx:
-        return gen(dat.mMtxRef, dat.mRows, dat.mCols);
-      case SSAregType::Scl:
-        return gen(dat.mVal);
-      case SSAregType::Nil:
-        return gen();
-      default: assert(false);
-    }
-  }
-
-  const SSAregData& lookup(RegName name) const {
-    if (strcmp(name.name, "s0") == 0)
-      return mNil;
-
-    decltype(mRegData)::const_iterator it = mRegData.find(name);
-    if (it != mRegData.end())
-      return (*it).second;
-    assert(!!!"unknown register name lookup occurred. this should not happen");
-  }
-
-  void associate(RegName name, const Mtx& mtx){
-    assert(mRegData.find(name) != mRegData.end());
-    SSAregData& dat = mRegData[name];
-    assert(dat.mType == SSAregType::Mtx);
-    mMtxMap.insert(std::make_pair(&mtx, name));
-    dat.mMtxRef = &mtx;
-  }
-
-  std::unordered_map<const Mtx*, RegName>& get_mtxmap(){
-    return mMtxMap;
-  }
-};
-
-//TODO: hide private members
-struct SSA {
-  std::vector<Instr> instructions;
-  SSAcontext         context;
-};
-
-//TODO: if every matrix will keep its own copy of SSA block, if it's used in other
-//expression the SSA block gets copied, we don't need to use shared_ptr at all!!!
-using SSABlock = std::shared_ptr<SSA>;
 
 struct SSAMtxCommunicator {
   static void reset_mtx_size(Mtx& dst, const SSAregData& data){
@@ -154,9 +38,9 @@ struct SSAMtxCommunicator {
   }
   static RegName merge_instructions(SSA& dst, const Mtx& src){
     //if there is no SSABlock in src, we're done
-    if (not src.mSSA) return dst.context.gen(&src, src.rows(), src.cols());
+    if (not src.is_ssa()) return dst.context.gen(&src, src.rows(), src.cols());
 
-    SSA& src_ssa = *src.mSSA;
+    SSA& src_ssa = src.ssa();
     std::unordered_map<RegName, RegName, RegNameHash> merge_map;
 
     class RegNameMerger {
@@ -194,102 +78,102 @@ struct SSAMtxCommunicator {
 };
 
 //TODO: hide these recursion functions
-template <typename CRTP> RegName to_ssa(std::shared_ptr<SSA> ret, const MtxBase<CRTP>& expr);
+template <typename CRTP> RegName to_ssa(SSA&, const MtxBase<CRTP>&);
 
-template <> RegName to_ssa(std::shared_ptr<SSA> ret, const MtxBase<MtxRef>& expr){
+template <> RegName to_ssa(SSA& ret, const MtxBase<MtxRef>& expr){
   const MtxRef& cexpr = static_cast<const MtxRef&>(expr);
   const Mtx& mtx = cexpr.mtx();
-  return SSAMtxCommunicator::merge_instructions(*ret, mtx);
+  return SSAMtxCommunicator::merge_instructions(ret, mtx);
 }
-template <> RegName to_ssa(std::shared_ptr<SSA> ret, const MtxBase<Scl>& expr){
-  return (*ret).context.gen(static_cast<const Scl&>(expr).val());
+template <> RegName to_ssa(SSA& ret, const MtxBase<Scl>& expr){
+  return ret.context.gen(static_cast<const Scl&>(expr).val());
 }
-template <typename X> RegName to_ssa(std::shared_ptr<SSA> ret, const MtxBase<Uop<TrnOp, X>>& expr){
+template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<TrnOp, X>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Uop<TrnOp, X>&>(expr).param());
-  const SSAregData& p1dat = (*ret).context.lookup(p1);
+  const SSAregData& p1dat = ret.context.lookup(p1);
   RegName p2;
-  RegName dst = (*ret).context.gen(nullptr, p1dat.mCols, p1dat.mRows);
-  (*ret).instructions.emplace_back(Instr(InstrType::Trn, dst, p1, p2));
+  RegName dst = ret.context.gen(nullptr, p1dat.mCols, p1dat.mRows);
+  ret.instructions.emplace_back(Instr(InstrType::Trn, dst, p1, p2));
   return dst;
 }
-template <typename X, typename Y> RegName to_ssa(std::shared_ptr<SSA> ret, const MtxBase<Bop<AddOp, X, Y>>& expr){
+template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<AddOp, X, Y>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Bop<AddOp, X, Y>&>(expr).param1());
   RegName p2 = to_ssa(ret, static_cast<const Bop<AddOp, X, Y>&>(expr).param2());
-  const SSAregData& p1dat = (*ret).context.lookup(p1);
-  const SSAregData& p2dat = (*ret).context.lookup(p2);
+  const SSAregData& p1dat = ret.context.lookup(p1);
+  const SSAregData& p2dat = ret.context.lookup(p2);
 
   assert(p1dat.mRows == p2dat.mRows || ((p1dat.mRows == 1 && p1dat.mCols == 1) || (p2dat.mRows == 1 && p2dat.mCols == 1)));
 
-  RegName dst = (*ret).context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
+  RegName dst = ret.context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
 
   if (p1dat.mType == SSAregType::Scl || p2dat.mType == SSAregType::Scl)
-    (*ret).instructions.emplace_back(Instr(InstrType::AddMC, dst, p1, p2));
+    ret.instructions.emplace_back(Instr(InstrType::AddMC, dst, p1, p2));
   else
-    (*ret).instructions.emplace_back(Instr(InstrType::Add, dst, p1, p2));
+    ret.instructions.emplace_back(Instr(InstrType::Add, dst, p1, p2));
   return dst;
 }
-template <typename X, typename Y> RegName to_ssa(std::shared_ptr<SSA> ret, const MtxBase<Bop<SubOp, X, Y>>& expr){
+template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<SubOp, X, Y>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Bop<SubOp, X, Y>&>(expr).param1());
   RegName p2 = to_ssa(ret, static_cast<const Bop<SubOp, X, Y>&>(expr).param2());
-  const SSAregData& p1dat = (*ret).context.lookup(p1);
-  const SSAregData& p2dat = (*ret).context.lookup(p2);
+  const SSAregData& p1dat = ret.context.lookup(p1);
+  const SSAregData& p2dat = ret.context.lookup(p2);
 
   assert(p1dat.mRows == p2dat.mRows || ((p1dat.mRows == 1 && p1dat.mCols == 1) || (p2dat.mRows == 1 && p2dat.mCols == 1)));
 
-  RegName dst = (*ret).context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
+  RegName dst = ret.context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
 
   if (p1dat.mType == SSAregType::Scl)
-    (*ret).instructions.emplace_back(Instr(InstrType::SubCM, dst, p1, p2));
+    ret.instructions.emplace_back(Instr(InstrType::SubCM, dst, p1, p2));
   else if (p2dat.mType == SSAregType::Scl)
-    (*ret).instructions.emplace_back(Instr(InstrType::SubMC, dst, p1, p2));
+    ret.instructions.emplace_back(Instr(InstrType::SubMC, dst, p1, p2));
   else
-    (*ret).instructions.emplace_back(Instr(InstrType::Sub, dst, p1, p2));
+    ret.instructions.emplace_back(Instr(InstrType::Sub, dst, p1, p2));
   return dst;
 }
-template <typename X, typename Y> RegName to_ssa(std::shared_ptr<SSA> ret, const MtxBase<Bop<MulOp, X, Y>>& expr){
+template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<MulOp, X, Y>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Bop<MulOp, X, Y>&>(expr).param1());
   RegName p2 = to_ssa(ret, static_cast<const Bop<MulOp, X, Y>&>(expr).param2());
-  const SSAregData& p1dat = (*ret).context.lookup(p1);
-  const SSAregData& p2dat = (*ret).context.lookup(p2);
+  const SSAregData& p1dat = ret.context.lookup(p1);
+  const SSAregData& p2dat = ret.context.lookup(p2);
 
   assert(p1dat.mRows == p2dat.mRows || ((p1dat.mRows == 1 && p1dat.mCols == 1) || (p2dat.mRows == 1 && p2dat.mCols == 1)));
 
-  RegName dst = (*ret).context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
+  RegName dst = ret.context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
 
   if (p1dat.mType == SSAregType::Scl || p2dat.mType == SSAregType::Scl)
-    (*ret).instructions.emplace_back(Instr(InstrType::EMulMC, dst, p1, p2));
+    ret.instructions.emplace_back(Instr(InstrType::EMulMC, dst, p1, p2));
   else
-    (*ret).instructions.emplace_back(Instr(InstrType::EMul, dst, p1, p2));
+    ret.instructions.emplace_back(Instr(InstrType::EMul, dst, p1, p2));
   return dst;
 }
-template <typename X, typename Y> RegName to_ssa(std::shared_ptr<SSA> ret, const MtxBase<Bop<DivOp, X, Y>>& expr){
+template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<DivOp, X, Y>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Bop<DivOp, X, Y>&>(expr).param1());
   RegName p2 = to_ssa(ret, static_cast<const Bop<DivOp, X, Y>&>(expr).param2());
-  const SSAregData& p1dat = (*ret).context.lookup(p1);
-  const SSAregData& p2dat = (*ret).context.lookup(p2);
+  const SSAregData& p1dat = ret.context.lookup(p1);
+  const SSAregData& p2dat = ret.context.lookup(p2);
 
   assert(p1dat.mRows == p2dat.mRows || ((p1dat.mRows == 1 && p1dat.mCols == 1) || (p2dat.mRows == 1 && p2dat.mCols == 1)));
 
-  RegName dst = (*ret).context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
+  RegName dst = ret.context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
 
   if (p1dat.mType == SSAregType::Scl)
-    (*ret).instructions.emplace_back(Instr(InstrType::EDivCM, dst, p1, p2));
+    ret.instructions.emplace_back(Instr(InstrType::EDivCM, dst, p1, p2));
   else if (p2dat.mType == SSAregType::Scl)
-    (*ret).instructions.emplace_back(Instr(InstrType::EDivMC, dst, p1, p2));
+    ret.instructions.emplace_back(Instr(InstrType::EDivMC, dst, p1, p2));
   else
-    (*ret).instructions.emplace_back(Instr(InstrType::EDiv, dst, p1, p2));
+    ret.instructions.emplace_back(Instr(InstrType::EDiv, dst, p1, p2));
   return dst;
 }
-template <typename X, typename Y> RegName to_ssa(std::shared_ptr<SSA> ret, const MtxBase<Bop<DotOp, X, Y>>& expr){
+template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<DotOp, X, Y>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Bop<DotOp, X, Y>&>(expr).param1());
   RegName p2 = to_ssa(ret, static_cast<const Bop<DotOp, X, Y>&>(expr).param2());
-  const SSAregData& p1dat = (*ret).context.lookup(p1);
-  const SSAregData& p2dat = (*ret).context.lookup(p2);
+  const SSAregData& p1dat = ret.context.lookup(p1);
+  const SSAregData& p2dat = ret.context.lookup(p2);
 
   assert(p1dat.mCols == p2dat.mRows);
 
-  RegName dst = (*ret).context.gen(nullptr, p1dat.mRows, p2dat.mCols);
-  (*ret).instructions.emplace_back(Instr(InstrType::Dot, dst, p1, p2));
+  RegName dst = ret.context.gen(nullptr, p1dat.mRows, p2dat.mCols);
+  ret.instructions.emplace_back(Instr(InstrType::Dot, dst, p1, p2));
   return dst;
 }
 
@@ -369,12 +253,12 @@ std::ostream& operator << (std::ostream& out, const SSA& ssa){
 }
 
 template <typename CRTP>
-std::shared_ptr<SSA> to_ssa(const MtxBase<CRTP>& expr, Mtx& dst){
-  std::shared_ptr<SSA> ret(new SSA());
+SSA to_ssa(const MtxBase<CRTP>& expr, Mtx& dst){
+  SSA ret;
   RegName dname = to_ssa(ret, expr);
-  const SSAregData& ddat = (*ret).context.lookup(dname);
+  const SSAregData& ddat = ret.context.lookup(dname);
   SSAMtxCommunicator::reset_mtx_size(dst, ddat);
-  (*ret).context.associate(dname, dst);
+  ret.context.associate(dname, dst);
   return ret;
 }
 
@@ -410,11 +294,11 @@ struct LocalValueNumberHash {
 
 //benefits:
 //  eliminate dead code
-void local_value_numbering(std::shared_ptr<SSA> ssa){
+void local_value_numbering(SSA& ssa){
   std::unordered_map<Instr, RegName, LocalValueNumberHash> vn;
   std::unordered_map<RegName, RegName, RegNameHash>        as;
   std::vector<Instr>                                       nins;
-  for (auto& instr : (*ssa).instructions){
+  for (auto& instr : ssa.instructions){
     Instr recon;
     recon.mType = instr.mType;
     decltype(as)::iterator rs1 = as.find(instr.mSrc1);
@@ -432,15 +316,15 @@ void local_value_numbering(std::shared_ptr<SSA> ssa){
     } else
       as.insert(std::make_pair(instr.mDst, (*f).second));
   }
-  (*ssa).instructions = nins;
+  ssa.instructions = nins;
 }
 
-RegSize estimate_register_size(std::shared_ptr<SSA> ssa){
+RegSize estimate_register_size(SSA& ssa){
   RegSize largest = {0UL, 0UL};
-  for (auto& instr : (*ssa).instructions){
-    const SSAregData& ddat = (*ssa).context.lookup(instr.mDst);
-    const SSAregData& s1dat = (*ssa).context.lookup(instr.mSrc1);
-    const SSAregData& s2dat = (*ssa).context.lookup(instr.mSrc2);
+  for (auto& instr : ssa.instructions){
+    const SSAregData& ddat = ssa.context.lookup(instr.mDst);
+    const SSAregData& s1dat = ssa.context.lookup(instr.mSrc1);
+    const SSAregData& s2dat = ssa.context.lookup(instr.mSrc2);
     largest.rs = std::max(largest.rs, ddat.mRows);
     largest.rs = std::max(largest.rs, s1dat.mRows);
     largest.rs = std::max(largest.rs, s2dat.mRows);
@@ -464,10 +348,10 @@ bool operator!=(const LiveSet& a, const LiveSet& b){
   return not (a == b);
 }
 
-std::vector<LiveSet> analyze_liveness(std::shared_ptr<SSA> ssa){
-  assert((*ssa).instructions.size() < std::numeric_limits<long long>::max());
-  long long size = static_cast<long long>((*ssa).instructions.size());
-  std::vector<LiveSet> res((*ssa).instructions.size());
+std::vector<LiveSet> analyze_liveness(SSA& ssa){
+  assert(ssa.instructions.size() < std::numeric_limits<long long>::max());
+  long long size = static_cast<long long>(ssa.instructions.size());
+  std::vector<LiveSet> res(ssa.instructions.size());
   bool is_changing = true;
   //NOTE: for a local block without branches, this should be done in 1 iteration
   while (is_changing){
@@ -475,19 +359,19 @@ std::vector<LiveSet> analyze_liveness(std::shared_ptr<SSA> ssa){
     for (long long i = size - 1; i >= 0; --i){
       LiveSet new_set;
       if (i == size - 1)
-        new_set.liveout.insert((*ssa).instructions[i].mDst); //assume the last temp should be live out
+        new_set.liveout.insert(ssa.instructions[i].mDst); //assume the last temp should be live out
       else
         new_set.liveout = res[i+1].livein;
       new_set.livein = new_set.liveout;
-      const SSAregData& dstDat = (*ssa).context.lookup((*ssa).instructions[i].mDst);
-      const SSAregData& s1Dat  = (*ssa).context.lookup((*ssa).instructions[i].mSrc1);
-      const SSAregData& s2Dat  = (*ssa).context.lookup((*ssa).instructions[i].mSrc2);
+      const SSAregData& dstDat = ssa.context.lookup(ssa.instructions[i].mDst);
+      const SSAregData& s1Dat  = ssa.context.lookup(ssa.instructions[i].mSrc1);
+      const SSAregData& s2Dat  = ssa.context.lookup(ssa.instructions[i].mSrc2);
       if (dstDat.mType == SSAregType::Mtx)
-        new_set.livein.erase((*ssa).instructions[i].mDst);
+        new_set.livein.erase(ssa.instructions[i].mDst);
       if (s1Dat.mType == SSAregType::Mtx)
-        new_set.livein.insert((*ssa).instructions[i].mSrc1);
+        new_set.livein.insert(ssa.instructions[i].mSrc1);
       if (s2Dat.mType == SSAregType::Mtx)
-        new_set.livein.insert((*ssa).instructions[i].mSrc2);
+        new_set.livein.insert(ssa.instructions[i].mSrc2);
       if (new_set != res[i]){
         is_changing = true;
         res[i] = new_set;
@@ -498,15 +382,15 @@ std::vector<LiveSet> analyze_liveness(std::shared_ptr<SSA> ssa){
 }
 
 //estimate the minimal number of temporaries needed for the block
-size_t estimate_cpu_local_registers(std::shared_ptr<SSA> ssa, const std::vector<LiveSet>& live){
+size_t estimate_cpu_local_registers(SSA& ssa, const std::vector<LiveSet>& live){
   size_t res = 0;
-  for (size_t i = 0; i < (*ssa).instructions.size(); ++i){
+  for (size_t i = 0; i < ssa.instructions.size(); ++i){
     size_t count = live[i].livein.size();
-    const SSAregData& dstData = (*ssa).context.lookup((*ssa).instructions[i].mDst);
+    const SSAregData& dstData = ssa.context.lookup(ssa.instructions[i].mDst);
     if (dstData.mType == SSAregType::Mtx && dstData.mMtxRef == nullptr)
       count++;
     for (auto name : live[i].livein){
-      const SSAregData& dat = (*ssa).context.lookup(name);
+      const SSAregData& dat = ssa.context.lookup(name);
       if (dat.mType == SSAregType::Mtx && dat.mMtxRef != nullptr)
         count--;
     }
@@ -515,9 +399,9 @@ size_t estimate_cpu_local_registers(std::shared_ptr<SSA> ssa, const std::vector<
   return res;
 }
 
-size_t estimate_gpu_local_registers(std::shared_ptr<SSA> ssa, const std::vector<LiveSet>& live){
+size_t estimate_gpu_local_registers(SSA& ssa, const std::vector<LiveSet>& live){
   size_t res = 0;
-  for (size_t i = 0; i < (*ssa).instructions.size(); ++i){
+  for (size_t i = 0; i < ssa.instructions.size(); ++i){
     size_t count = live[i].livein.size() + 1;
     res = std::max(res, count);
   }
@@ -664,7 +548,7 @@ public:
   }
 };
 
-std::vector<Instr> local_register_allocation(std::shared_ptr<SSA> ssa, MemInstrContext& ctx, const std::vector<LiveSet>& liveness){
+std::vector<Instr> local_register_allocation(SSA& ssa, MemInstrContext& ctx, const std::vector<LiveSet>& liveness){
   std::vector<Instr> ret;
   std::unordered_map<RegName, RegName, RegNameHash> tmap;
   std::queue<RegName> fr = ctx.gen_regs();
@@ -706,13 +590,13 @@ std::vector<Instr> local_register_allocation(std::shared_ptr<SSA> ssa, MemInstrC
     }
   } gen_name(tmap, fr, ctx);
 
-  for (size_t i = 0; i < (*ssa).instructions.size(); ++i){
-    Instr& si = (*ssa).instructions[i];
-    const SSAregData& s1dat = (*ssa).context.lookup(si.mSrc1);
+  for (size_t i = 0; i < ssa.instructions.size(); ++i){
+    Instr& si = ssa.instructions[i];
+    const SSAregData& s1dat = ssa.context.lookup(si.mSrc1);
     RegName r1name = gen_name(si.mSrc1, s1dat);
-    const SSAregData& s2dat = (*ssa).context.lookup(si.mSrc2);
+    const SSAregData& s2dat = ssa.context.lookup(si.mSrc2);
     RegName r2name = gen_name(si.mSrc2, s2dat);
-    const SSAregData& ddat = (*ssa).context.lookup(si.mDst);
+    const SSAregData& ddat = ssa.context.lookup(si.mDst);
     RegName dname = gen_name(si.mDst, ddat);
     if (ctx.type(r1name) == RegType::Reg && liveness[i].liveout.find(si.mSrc1) == liveness[i].liveout.end()){
       fr.push(r1name);
@@ -728,6 +612,15 @@ std::vector<Instr> local_register_allocation(std::shared_ptr<SSA> ssa, MemInstrC
   return ret;
 }
 
+struct ComputeMtxCommunicator {
+  static void clear_ssa(const Mtx& mtx){
+    mtx.clear_ssa();
+  }
+  static double* get_data(const Mtx& mtx){
+    return mtx.data();
+  }
+};
+
 void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
   class MemFinder {
     MemInstrContext& ctx;
@@ -737,7 +630,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
       double* ret = nullptr;
       switch (ctx.type(name)){
         case RegType::Mem:
-          ret = (*ctx.lookup_mem(name)).data();
+          ret = ComputeMtxCommunicator::get_data((*ctx.lookup_mem(name)));
         break;
         case RegType::Reg:
           ret = ctx.lookup_reg(name).mMem;
@@ -909,21 +802,21 @@ void release_ssa(MemInstrContext& ctx){
   std::unordered_map<const Mtx*, RegName>& outputs = ctx.memMap();
   for (std::unordered_map<const Mtx*, RegName>::iterator it = outputs.begin(); it != outputs.end(); ++it){
     const Mtx* pm = (*it).first;
-    (*pm).clear_ssa();
+    ComputeMtxCommunicator::clear_ssa(*pm);
   }
 }
 
-void memvaluateSSA(std::shared_ptr<SSA> ssa, MemArena& arena){
+void memvaluateSSA(SSA& ssa, MemArena& arena){
   //GOTHERE
   std::cout << "Before Optimization: " << std::endl;
-  std::cout << *ssa;
+  std::cout << ssa;
 
   //TODO: optimize given SSA: dead code elimination etc
   local_value_numbering(ssa);
 
   //GOTHERE
   std::cout << "After Optimization: " << std::endl;
-  std::cout << *ssa;
+  std::cout << ssa;
 
   RegSize regsize = estimate_register_size(ssa);
   std::vector<LiveSet> liveness = analyze_liveness(ssa);
