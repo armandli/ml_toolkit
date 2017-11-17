@@ -134,15 +134,6 @@ std::vector<LiveSet> analyze_liveness(SSA& ssa){
   return res;
 }
 
-//size_t estimate_gpu_local_registers(SSA& ssa, const std::vector<LiveSet>& live){
-//  size_t res = 0;
-//  for (size_t i = 0; i < ssa.instructions.size(); ++i){
-//    size_t count = live[i].livein.size() + 1;
-//    res = std::max(res, count);
-//  }
-//  return res;
-//}
-
 enum class RegType : unsigned {
   Mem,
   Reg,

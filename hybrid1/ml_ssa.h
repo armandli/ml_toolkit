@@ -14,7 +14,6 @@
 #include <ml_instr.h>
 #include <ml_ssa_decl.h>
 #include <ml_matrix.h>
-#include <ml_arena.h>
 #include <ml_sse.h>
 
 namespace ML {

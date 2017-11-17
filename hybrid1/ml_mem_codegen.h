@@ -8,6 +8,7 @@
 #include <ml_instr.h>
 #include <ml_ssa_decl.h>
 #include <ml_codegen.h>
+#include <ml_arena.h>
 
 namespace ML {
 
