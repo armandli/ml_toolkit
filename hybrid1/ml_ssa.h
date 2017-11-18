@@ -93,6 +93,30 @@ template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<TrnOp, X>>& exp
   ret.instructions.emplace_back(Instr(InstrType::Trn, dst, p1, p2));
   return dst;
 }
+template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<SigmoidOp, X>>& expr){
+  RegName p1 = to_ssa(ret, static_cast<const Uop<TrnOp, X>&>(expr).param());
+  const SSAregData& p1dat = ret.context.lookup(p1);
+  RegName p2;
+  RegName dst = ret.context.gen(nullptr, p1dat.mRows, p1dat.mCols);
+  ret.instructions.emplace_back(Instr(InstrType::Sigmoid, dst, p1, p2));
+  return dst;
+}
+template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<TanhOp, X>>& expr){
+  RegName p1 = to_ssa(ret, static_cast<const Uop<TanhOp, X>&>(expr).param());
+  const SSAregData& p1dat = ret.context.lookup(p1);
+  RegName p2;
+  RegName dst = ret.context.gen(nullptr, p1dat.mRows, p1dat.mCols);
+  ret.instructions.emplace_back(Instr(InstrType::Tanh, dst, p1, p2));
+  return dst;
+}
+template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<SoftmaxOp, X>>& expr){
+  RegName p1 = to_ssa(ret, static_cast<const Uop<SoftmaxOp, X>&>(expr).param());
+  const SSAregData& p1dat = ret.context.lookup(p1);
+  RegName p2;
+  RegName dst = ret.context.gen(nullptr, p1dat.mRows, p1dat.mCols);
+  ret.instructions.emplace_back(Instr(InstrType::Softmax, dst, p1, p2));
+  return dst;
+}
 template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<AddOp, X, Y>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Bop<AddOp, X, Y>&>(expr).param1());
   RegName p2 = to_ssa(ret, static_cast<const Bop<AddOp, X, Y>&>(expr).param2());
@@ -243,6 +267,15 @@ std::ostream& operator << (std::ostream& out, const SSA& ssa){
       break;
       case InstrType::Trn:
         out << instr.mDst << " <- ~" << instr.mSrc1 << "\n";
+      break;
+      case InstrType::Sigmoid:
+        out << instr.mDst << " <- sigmoid(" << instr.mSrc1 << ")\n";
+      break;
+      case InstrType::Tanh:
+        out << instr.mDst << " <- tanh(" << instr.mSrc1 << ")\n";
+      break;
+      case InstrType::Softmax:
+        out << instr.mDst << " <- softmax(" << instr.mSrc1 << ")\n";
       break;
       //TODO: expand operation here
       default: assert(false);

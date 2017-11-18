@@ -45,6 +45,9 @@ enum class InstrType : unsigned {
   EDivMC,
   EDivCM,
   Trn,
+  Sigmoid,
+  Tanh,
+  Softmax,
   //TODO: expand operation here
   //Following Instruction only applies to GPU side
   CopyTo,

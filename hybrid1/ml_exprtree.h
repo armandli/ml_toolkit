@@ -83,7 +83,6 @@ struct TrnOp {
     ss << "~";
   }
 };
-
 Uop<TrnOp, MtxRef> operator~(MtxRef&& a){
   return Uop<TrnOp, MtxRef>(std::move(a));
 }
@@ -93,6 +92,54 @@ Uop<TrnOp, X> operator~(MtxBase<X>&& a){
   return Uop<TrnOp, X>(static_cast<X&&>(a));
 }
 /* END Transpose */
+
+/* BEGIN Sigmoid */
+struct SigmoidOp {
+  static void debug(std::stringstream& ss){
+    ss << "sigmoid";
+  }
+};
+
+Uop<SigmoidOp, MtxRef> sigmoid(MtxRef&& a){
+  return Uop<SigmoidOp, MtxRef>(std::move(a));
+}
+template <typename X>
+Uop<SigmoidOp, X> sigmoid(MtxBase<X>&& a){
+  return Uop<SigmoidOp, X>(static_cast<X&&>(a));
+}
+/* END Sigmoid */
+
+/* BEGIN Tanh */
+struct TanhOp {
+  static void debug(std::stringstream& ss){
+    ss << "tanh";
+  }
+};
+
+Uop<TanhOp, MtxRef> tanh(MtxRef&& a){
+  return Uop<TanhOp, MtxRef>(std::move(a));
+}
+template <typename X>
+Uop<TanhOp, X> tanh(MtxBase<X>&& a){
+  return Uop<TanhOp, X>(static_cast<X&&>(a));
+}
+/* END Tanh */
+
+/* BEGIN softmax */
+struct SoftmaxOp {
+  static void debug(std::stringstream& ss){
+    ss << "softmax";
+  }
+};
+
+Uop<SoftmaxOp, MtxRef> softmax(MtxRef&& a){
+  return Uop<SoftmaxOp, MtxRef>(std::move(a));
+}
+template <typename X>
+Uop<SoftmaxOp, X> softmax(MtxBase<X>&& a){
+  return Uop<SoftmaxOp, X>(static_cast<X&&>(a));
+}
+/* END softmax */
 
 template <typename Op, typename X, typename Y>
 class Bop : public MtxBase<Bop<Op,X,Y>> {
@@ -131,35 +178,28 @@ struct AddOp {
 Bop<AddOp, MtxRef, Scl> operator+(MtxRef&& a, Scl&& b){
   return Bop<AddOp, MtxRef, Scl>(std::move(a), std::move(b));
 }
-
 Bop<AddOp, Scl, MtxRef> operator+(Scl&& a, MtxRef&& b){
   return Bop<AddOp, Scl, MtxRef>(std::move(a), std::move(b));
 }
-
 template <typename X>
 Bop<AddOp, Scl, X> operator+(Scl&& a, MtxBase<X>&& b){
   return Bop<AddOp, Scl, X>(std::move(a), static_cast<X&&>(b));
 }
-
 template <typename X>
 Bop<AddOp, X, Scl> operator+(MtxBase<X>&& a, Scl&& b){
   return Bop<AddOp, X, Scl>(static_cast<X&&>(a), std::move(b));
 }
-
 Bop<AddOp, MtxRef, MtxRef> operator+(MtxRef&& a, MtxRef&& b){
   return Bop<AddOp, MtxRef, MtxRef>(std::move(a), std::move(b));
 }
-
 template <typename X>
 Bop<AddOp, X, MtxRef> operator+(MtxBase<X>&& a, MtxRef&& b){
   return Bop<AddOp, X, MtxRef>(static_cast<X&&>(a), std::move(b));
 }
-
 template <typename X>
 Bop<AddOp, MtxRef, X> operator+(MtxRef&& a, MtxBase<X>&& b){
   return Bop<AddOp, MtxRef, X>(std::move(a), static_cast<X&&>(b));
 }
-
 template <typename X, typename Y>
 Bop<AddOp, X, Y> operator+(MtxBase<X>&& a, MtxBase<Y>&& b){
   return Bop<AddOp, X, Y>(static_cast<X&&>(a), static_cast<Y&&>(b));
@@ -176,35 +216,28 @@ struct SubOp {
 Bop<SubOp, MtxRef, Scl> operator-(MtxRef&& a, Scl&& b){
   return Bop<SubOp, MtxRef, Scl>(std::move(a), std::move(b));
 }
-
 Bop<SubOp, Scl, MtxRef> operator-(Scl&& a, MtxRef&& b){
   return Bop<SubOp, Scl, MtxRef>(std::move(a), std::move(b));
 }
-
 template <typename X>
 Bop<SubOp, Scl, X> operator-(Scl&& a, MtxBase<X>&& b){
   return Bop<SubOp, Scl, X>(std::move(a), static_cast<X&&>(b));
 }
-
 template <typename X>
 Bop<SubOp, X, Scl> operator-(MtxBase<X>&& a, Scl&& b){
   return Bop<SubOp, X, Scl>(static_cast<X&&>(a), std::move(b));
 }
-
 Bop<SubOp, MtxRef, MtxRef> operator-(MtxRef&& a, MtxRef&& b){
   return Bop<SubOp, MtxRef, MtxRef>(std::move(a), std::move(b));
 }
-
 template <typename X>
 Bop<SubOp, X, MtxRef> operator-(MtxBase<X>&& a, MtxRef&& b){
   return Bop<SubOp, X, MtxRef>(static_cast<X&&>(a), std::move(b));
 }
-
 template <typename X>
 Bop<SubOp, MtxRef, X> operator-(MtxRef&& a, MtxBase<X>&& b){
   return Bop<SubOp, MtxRef, X>(std::move(a), static_cast<X&&>(b));
 }
-
 template <typename X, typename Y>
 Bop<SubOp, X, Y> operator-(MtxBase<X>&& a, MtxBase<Y>&& b){
   return Bop<SubOp, X, Y>(static_cast<X&&>(a), static_cast<Y&&>(b));
@@ -221,30 +254,24 @@ struct MulOp {
 Bop<MulOp, MtxRef, Scl> operator*(MtxRef&& a, Scl&& b){
   return Bop<MulOp, MtxRef, Scl>(std::move(a), std::move(b));
 }
-
 Bop<MulOp, Scl, MtxRef> operator*(Scl&& a, MtxRef&& b){
   return Bop<MulOp, Scl, MtxRef>(std::move(a), std::move(b));
 }
-
 template <typename X>
 Bop<MulOp, Scl, X> operator*(Scl&& a, MtxBase<X>&& b){
   return Bop<MulOp, Scl, X>(std::move(a), static_cast<X&&>(b));
 }
-
 template <typename X>
 Bop<MulOp, X, Scl> operator*(MtxBase<X>&& a, Scl&& b){
   return Bop<MulOp, X, Scl>(static_cast<X&&>(a), std::move(b));
 }
-
 Bop<MulOp, MtxRef, MtxRef> operator*(MtxRef&& a, MtxRef&& b){
   return Bop<MulOp, MtxRef, MtxRef>(std::move(a), std::move(b));
 }
-
 template <typename X>
 Bop<MulOp, X, MtxRef> operator*(MtxBase<X>&& a, MtxRef&& b){
   return Bop<MulOp, X, MtxRef>(static_cast<X&&>(a), std::move(b));
 }
-
 template <typename X>
 Bop<MulOp, MtxRef, X> operator*(MtxRef&& a, MtxBase<X>&& b){
   return Bop<MulOp, MtxRef, X>(std::move(a), static_cast<X&&>(b));
@@ -262,39 +289,31 @@ struct DivOp {
     ss << "/";
   }
 };
-
 Bop<DivOp, MtxRef, Scl> operator/(MtxRef&& a, Scl&& b){
   return Bop<DivOp, MtxRef, Scl>(std::move(a), std::move(b));
 }
-
 Bop<DivOp, Scl, MtxRef> operator/(Scl&& a, MtxRef&& b){
   return Bop<DivOp, Scl, MtxRef>(std::move(a), std::move(b));
 }
-
 template <typename X>
 Bop<DivOp, Scl, X> operator/(Scl&& a, MtxBase<X>&& b){
   return Bop<DivOp, Scl, X>(std::move(a), static_cast<X&&>(b));
 }
-
 template <typename X>
 Bop<DivOp, X, Scl> operator/(MtxBase<X>&& a, Scl&& b){
   return Bop<DivOp, X, Scl>(static_cast<X&&>(a), std::move(b));
 }
-
 Bop<DivOp, MtxRef, MtxRef> operator/(MtxRef&& a, MtxRef&& b){
   return Bop<DivOp, MtxRef, MtxRef>(std::move(a), std::move(b));
 }
-
 template <typename X>
 Bop<DivOp, X, MtxRef> operator/(MtxBase<X>&& a, MtxRef&& b){
   return Bop<DivOp, X, MtxRef>(static_cast<X&&>(a), std::move(b));
 }
-
 template <typename X>
 Bop<DivOp, MtxRef, X> operator/(MtxRef&& a, MtxBase<X>&& b){
   return Bop<DivOp, MtxRef, X>(std::move(a), static_cast<X&&>(b));
 }
-
 template <typename X, typename Y>
 Bop<DivOp, X, Y> operator/(MtxBase<X>&& a, MtxBase<Y>&& b){
   return Bop<DivOp, X, Y>(static_cast<X&&>(a), static_cast<Y&&>(b));
@@ -326,17 +345,14 @@ Bop<DotOp, X, Scl> operator^(MtxBase<X>&&, Scl&&){
 Bop<DotOp, MtxRef, MtxRef> operator^(MtxRef&& a, MtxRef&& b){
   return Bop<DotOp, MtxRef, MtxRef>(std::move(a), std::move(b));
 }
-
 template <typename X>
 Bop<DotOp, X, MtxRef> operator^(MtxBase<X>&& a, MtxRef&& b){
   return Bop<DotOp, X, MtxRef>(static_cast<X&&>(a), std::move(b));
 }
-
 template <typename X>
 Bop<DotOp, MtxRef, X> operator^(MtxRef&& a, MtxBase<X>&& b){
   return Bop<DotOp, MtxRef, X>(std::move(a), static_cast<X&&>(b));
 }
-
 template <typename X, typename Y>
 Bop<DotOp, X, Y> operator^(MtxBase<X>&& a, MtxBase<Y>&& b){
   return Bop<DotOp, X, Y>(static_cast<X&&>(a), static_cast<Y&&>(b));

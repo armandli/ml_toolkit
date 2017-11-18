@@ -274,6 +274,24 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         SSE::transpose4x4_2d_sse_pd(d, s1, roundup_row(s1size.rs), roundup_col(s1size.cs));
       }
       break;
+      case InstrType::Sigmoid:
+      case InstrType::Tanh:
+      case InstrType::Softmax: {
+        double* s1 = find_mem(si.mSrc1);
+        double* d  = find_mem(si.mDst);
+        assert(s1 != nullptr && d != nullptr);
+        RegSize sz = find_size(si.mSrc1);
+        assert(sz.rs > 0 && sz.cs > 0);
+        if (ctx.type(si.mDst) == RegType::Reg)
+          ctx.setRegSize(si.mDst, sz.rs, sz.cs);
+        switch (si.mType){
+          case InstrType::Sigmoid: SSE::sigmoid_2d_sse_pd(d, s1, sz.rs, sz.cs, roundup_col(sz.cs)); break;
+          case InstrType::Tanh:    SSE::tanh_1d_sse_pd(d, s1, sz.rs, roundup_col(sz.cs)); break;
+          case InstrType::Softmax: SSE::softmax_r_2d_sse_pd(d, s1, sz.rs, roundup_col(sz.cs)); break;
+          default: assert(false);
+        }
+      }
+      break;
       //TODO: expand operation here
       default: assert(false);
     }

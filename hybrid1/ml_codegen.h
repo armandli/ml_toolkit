@@ -46,6 +46,7 @@ struct LocalValueNumberHash {
   }
 };
 
+//TODO: make sure matrix operation such as add and multiply uses the same ordering between matrix or matrix and scalar, i.e. a + b can be optimized away if b + a exist
 //benefits:
 //  eliminate dead code
 void local_value_numbering(SSA& ssa){
