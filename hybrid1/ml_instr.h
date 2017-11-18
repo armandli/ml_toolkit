@@ -45,6 +45,10 @@ enum class InstrType : unsigned {
   EDivMC,
   EDivCM,
   Trn,
+  //TODO: expand operation here
+  //Following Instruction only applies to GPU side
+  CopyTo,
+  CopyFrom,
 };
 
 struct Instr {

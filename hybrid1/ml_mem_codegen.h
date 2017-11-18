@@ -10,6 +10,8 @@
 #include <ml_codegen.h>
 #include <ml_arena.h>
 
+//TODO: have to take care of what happens if memory is not fresh!!! especially arena memory is not always cleared
+
 namespace ML {
 
 //estimate the minimal number of temporaries needed for the block
@@ -36,6 +38,14 @@ public:
   MemInstrContext(MemArena& arena, RegSize rsz, size_t reg_count): InstrContext(), mArena(arena) {
     for (size_t i = 0; i < reg_count; ++i)
       addReg(RegData(arena.reg(i), rsz.rs, rsz.cs));
+  }
+
+  std::queue<RegName> gen_regs(){
+    std::queue<RegName> ret;
+    for (decltype(mRegMap)::iterator it = mRegMap.begin(); it != mRegMap.end(); ++it){
+      ret.push((*it).first);
+    }
+    return ret;
   }
 };
 
@@ -72,9 +82,7 @@ std::vector<Instr> local_register_allocation(SSA& ssa, MemInstrContext& ctx, con
         case SSAregType::Scl:
           ret = ctx.addConst(sdat.mVal);
         break;
-        case SSAregType::Nil:
-          memcpy(ret.name, "nil", 3);
-        break;
+        case SSAregType::Nil: /*DO NOTHING*/ break;
         default: assert(false);
       }
       return ret;
@@ -163,14 +171,11 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         double* s1 = find_mem(si.mSrc1);
         double* s2 = find_mem(si.mSrc2);
         double* d  = find_mem(si.mDst);
-        assert(s1 != nullptr);
-        assert(s2 != nullptr);
-        assert(d != nullptr);
+        assert(s1 != nullptr && s2 != nullptr && d != nullptr);
         RegSize s1size = find_size(si.mSrc1);
         assert(s1size.rs > 0 && s1size.cs > 0);
         if (ctx.type(si.mDst) == RegType::Reg)
           ctx.setRegSize(si.mDst, s1size.rs, s1size.cs);
-
         switch (si.mType){
           case InstrType::Add:  SSE::add_1d_sse_pd(d, s1, s2, roundup_row(s1size.rs), roundup_col(s1size.cs)); break;
           case InstrType::Sub:  SSE::sub_1d_sse_pd(d, s1, s2, roundup_row(s1size.rs), roundup_col(s1size.cs)); break;
@@ -184,9 +189,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         double* s1 = find_mem(si.mSrc1);
         double* s2 = find_mem(si.mSrc2);
         double* d  = find_mem(si.mDst);
-        assert(s1 != nullptr);
-        assert(s2 != nullptr);
-        assert(d != nullptr);
+        assert(s1 != nullptr && s2 != nullptr && d != nullptr);
         RegSize s1size = find_size(si.mSrc1);
         RegSize s2size = find_size(si.mSrc2);
         assert(s1size.rs > 0 && s1size.cs > 0 && s2size.rs > 0 && s2size.cs > 0);
@@ -208,8 +211,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         double* s1 = find_mem(si.mSrc1);
         double  s2 = ctx.lookup_val(si.mSrc2);
         double* d  = find_mem(si.mDst);
-        assert(s1 != nullptr);
-        assert(d != nullptr);
+        assert(s1 != nullptr && d != nullptr);
         RegSize s1size = find_size(si.mSrc1);
         assert(s1size.rs > 0 && s1size.cs > 0);
         if (ctx.type(si.mDst) == RegType::Reg)
@@ -226,8 +228,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         double s1  = ctx.lookup_val(si.mSrc1);
         double* s2 = find_mem(si.mSrc2);
         double* d  = find_mem(si.mDst);
-        assert(s2 != nullptr);
-        assert(d != nullptr);
+        assert(s2 != nullptr && d != nullptr);
         RegSize s2size = find_size(si.mSrc2);
         assert(s2size.rs > 0 && s2size.cs > 0);
         if (ctx.type(si.mDst) == RegType::Reg)
@@ -254,8 +255,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
           sz  = find_size(si.mSrc2);
         }
         double* d = find_mem(si.mDst);
-        assert(arg != nullptr);
-        assert(d != nullptr);
+        assert(arg != nullptr && d != nullptr);
         switch (si.mType){
           case InstrType::AddMC:  SSE::add_const_2d_sse_pd(d, arg, val, sz.rs, sz.cs, roundup_col(sz.cs)); break;
           case InstrType::EMulMC: SSE::emul_const_2d_sse_pd(d, arg, val, roundup_row(sz.rs), roundup_col(sz.cs)); break;
@@ -266,8 +266,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
       case InstrType::Trn: {
         double* s1 = find_mem(si.mSrc1);
         double* d  = find_mem(si.mDst);
-        assert(s1 != nullptr);
-        assert(d != nullptr);
+        assert(s1 != nullptr && d != nullptr);
         RegSize s1size = find_size(si.mSrc1);
         assert(s1size.rs > 0 && s1size.cs > 0);
         if (ctx.type(si.mDst) == RegType::Reg)
@@ -275,16 +274,9 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         SSE::transpose4x4_2d_sse_pd(d, s1, roundup_row(s1size.rs), roundup_col(s1size.cs));
       }
       break;
+      //TODO: expand operation here
       default: assert(false);
     }
-  }
-}
-
-void release_ssa(MemInstrContext& ctx){
-  std::unordered_map<const Mtx*, RegName>& outputs = ctx.memMap();
-  for (std::unordered_map<const Mtx*, RegName>::iterator it = outputs.begin(); it != outputs.end(); ++it){
-    const Mtx* pm = (*it).first;
-    ComputeMtxCommunicator::clear_ssa(*pm);
   }
 }
 

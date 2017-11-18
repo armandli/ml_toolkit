@@ -36,6 +36,7 @@ struct LocalValueNumberHash {
       case InstrType::EDivMC: pr[0] = 9; break;
       case InstrType::EDivCM: pr[0] = 10; break;
       case InstrType::Trn:    pr[0] = 11; break;
+      //TODO: expand operations here
       default: assert(false);
     }
     memcpy(pr + 1, instr.mSrc1.name + 1, RegName::Len - 1);
@@ -159,11 +160,13 @@ struct RegData {
 };
 
 class InstrContext {
+protected:
   std::unordered_map<RegName, const Mtx*, RegNameHash> mMemMap;
   std::unordered_map<const Mtx*, RegName>              mMtxMap;
   std::unordered_map<RegName, RegData, RegNameHash>    mRegMap;
   std::unordered_map<RegName, double, RegNameHash>     mConstMap;
   std::unordered_map<double, RegName>                  mValMap;
+private:
   int                                                  mMemCount;
   int                                                  mRegCount;
   int                                                  mConstCount;
@@ -195,14 +198,6 @@ public:
       case NIL: return RegType::Nil;
       default: assert(false);
     }
-  }
-
-  std::queue<RegName> gen_regs(){
-    std::queue<RegName> ret;
-    for (decltype(mRegMap)::iterator it = mRegMap.begin(); it != mRegMap.end(); ++it){
-      ret.push((*it).first);
-    }
-    return ret;
   }
 
   void setRegSize(RegName name, size_t rows, size_t cols){
@@ -274,7 +269,14 @@ struct ComputeMtxCommunicator {
   }
 };
 
-//TODO: do register allocation for GPU
+void release_ssa(InstrContext& ctx){
+  std::unordered_map<const Mtx*, RegName>& mtxes = ctx.memMap();
+  for (std::unordered_map<const Mtx*, RegName>::iterator it = mtxes.begin(); it != mtxes.end(); ++it){
+    const Mtx* pm = (*it).first;
+    ComputeMtxCommunicator::clear_ssa(*pm);
+  }
+}
+
 
 } //ML
 

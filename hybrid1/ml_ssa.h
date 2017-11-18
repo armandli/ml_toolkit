@@ -14,7 +14,6 @@
 #include <ml_instr.h>
 #include <ml_ssa_decl.h>
 #include <ml_matrix.h>
-#include <ml_sse.h>
 
 namespace ML {
 
@@ -174,6 +173,7 @@ template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<Dot
   ret.instructions.emplace_back(Instr(InstrType::Dot, dst, p1, p2));
   return dst;
 }
+//TODO: expand operation here
 
 std::ostream& operator << (std::ostream& out, const SSA& ssa){
   for (auto& instr : ssa.instructions){
@@ -244,6 +244,7 @@ std::ostream& operator << (std::ostream& out, const SSA& ssa){
       case InstrType::Trn:
         out << instr.mDst << " <- ~" << instr.mSrc1 << "\n";
       break;
+      //TODO: expand operation here
       default: assert(false);
     }
   }

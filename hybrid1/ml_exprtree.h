@@ -343,7 +343,7 @@ Bop<DotOp, X, Y> operator^(MtxBase<X>&& a, MtxBase<Y>&& b){
 }
 /* END Matrix Multiplication */
 
-//TODO: additional operations need to be added
+//TODO: expand operation here
 
 } //ML
 
