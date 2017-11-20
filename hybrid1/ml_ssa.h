@@ -93,12 +93,12 @@ template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<TrnOp, X>>& exp
   ret.instructions.emplace_back(Instr(InstrType::Trn, dst, p1, p2));
   return dst;
 }
-template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<SigmoidOp, X>>& expr){
-  RegName p1 = to_ssa(ret, static_cast<const Uop<TrnOp, X>&>(expr).param());
+template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<NotOp, X>>& expr){
+  RegName p1 = to_ssa(ret, static_cast<const Uop<NotOp, X>&>(expr).param());
   const SSAregData& p1dat = ret.context.lookup(p1);
   RegName p2;
   RegName dst = ret.context.gen(nullptr, p1dat.mRows, p1dat.mCols);
-  ret.instructions.emplace_back(Instr(InstrType::Sigmoid, dst, p1, p2));
+  ret.instructions.emplace_back(Instr(InstrType::Not, dst, p1, p2));
   return dst;
 }
 template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<TanhOp, X>>& expr){
@@ -117,13 +117,29 @@ template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<SoftmaxOp, X>>&
   ret.instructions.emplace_back(Instr(InstrType::Softmax, dst, p1, p2));
   return dst;
 }
+template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<ExpOp, X>>& expr){
+  RegName p1 = to_ssa(ret, static_cast<const Uop<ExpOp, X>&>(expr).param());
+  const SSAregData& p1dat = ret.context.lookup(p1);
+  RegName p2;
+  RegName dst = ret.context.gen(nullptr, p1dat.mRows, p1dat.mCols);
+  ret.instructions.emplace_back(Instr(InstrType::Exp, dst, p1, p2));
+  return dst;
+}
+template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<IsnanOp, X>>& expr){
+  RegName p1 = to_ssa(ret, static_cast<const Uop<IsnanOp, X>&>(expr).param());
+  const SSAregData& p1dat = ret.context.lookup(p1);
+  RegName p2;
+  RegName dst = ret.context.gen(nullptr, p1dat.mRows, p1dat.mCols);
+  ret.instructions.emplace_back(Instr(InstrType::Isnan, dst, p1, p2));
+  return dst;
+}
 template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<AddOp, X, Y>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Bop<AddOp, X, Y>&>(expr).param1());
   RegName p2 = to_ssa(ret, static_cast<const Bop<AddOp, X, Y>&>(expr).param2());
   const SSAregData& p1dat = ret.context.lookup(p1);
   const SSAregData& p2dat = ret.context.lookup(p2);
 
-  assert(p1dat.mRows == p2dat.mRows || ((p1dat.mRows == 1 && p1dat.mCols == 1) || (p2dat.mRows == 1 && p2dat.mCols == 1)));
+  assert((p1dat.mRows == p2dat.mRows && p1dat.mCols == p2dat.mCols) || ((p1dat.mRows == 1 && p1dat.mCols == 1) || (p2dat.mRows == 1 && p2dat.mCols == 1)));
 
   RegName dst = ret.context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
 
@@ -139,7 +155,7 @@ template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<Sub
   const SSAregData& p1dat = ret.context.lookup(p1);
   const SSAregData& p2dat = ret.context.lookup(p2);
 
-  assert(p1dat.mRows == p2dat.mRows || ((p1dat.mRows == 1 && p1dat.mCols == 1) || (p2dat.mRows == 1 && p2dat.mCols == 1)));
+  assert((p1dat.mRows == p2dat.mRows && p1dat.mCols == p2dat.mCols) || ((p1dat.mRows == 1 && p1dat.mCols == 1) || (p2dat.mRows == 1 && p2dat.mCols == 1)));
 
   RegName dst = ret.context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
 
@@ -157,7 +173,7 @@ template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<Mul
   const SSAregData& p1dat = ret.context.lookup(p1);
   const SSAregData& p2dat = ret.context.lookup(p2);
 
-  assert(p1dat.mRows == p2dat.mRows || ((p1dat.mRows == 1 && p1dat.mCols == 1) || (p2dat.mRows == 1 && p2dat.mCols == 1)));
+  assert((p1dat.mRows == p2dat.mRows && p1dat.mCols == p2dat.mCols) || ((p1dat.mRows == 1 && p1dat.mCols == 1) || (p2dat.mRows == 1 && p2dat.mCols == 1)));
 
   RegName dst = ret.context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
 
@@ -173,7 +189,7 @@ template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<Div
   const SSAregData& p1dat = ret.context.lookup(p1);
   const SSAregData& p2dat = ret.context.lookup(p2);
 
-  assert(p1dat.mRows == p2dat.mRows || ((p1dat.mRows == 1 && p1dat.mCols == 1) || (p2dat.mRows == 1 && p2dat.mCols == 1)));
+  assert((p1dat.mRows == p2dat.mRows && p1dat.mCols == p2dat.mCols) || ((p1dat.mRows == 1 && p1dat.mCols == 1) || (p2dat.mRows == 1 && p2dat.mCols == 1)));
 
   RegName dst = ret.context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
 
@@ -197,6 +213,36 @@ template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<Dot
   ret.instructions.emplace_back(Instr(InstrType::Dot, dst, p1, p2));
   return dst;
 }
+template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<GtOp, X, Y>>& expr){
+  RegName p1 = to_ssa(ret, static_cast<const Bop<GtOp, X, Y>&>(expr).param1());
+  RegName p2 = to_ssa(ret, static_cast<const Bop<GtOp, X, Y>&>(expr).param2());
+  const SSAregData& p1dat = ret.context.lookup(p1);
+  const SSAregData& p2dat = ret.context.lookup(p2);
+
+  assert((p1dat.mRows == p2dat.mRows && p1dat.mCols == p2dat.mCols) || (p1dat.mRows == 1 && p1dat.mCols == 1) || (p2dat.mRows == 1 && p2dat.mCols == 1));
+
+  RegName dst = ret.context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
+
+  if (p1dat.mType == SSAregType::Scl)
+    ret.instructions.emplace_back(Instr(InstrType::GTCM, dst, p1, p2));
+  else if (p2dat.mType == SSAregType::Scl)
+    ret.instructions.emplace_back(Instr(InstrType::GTMC, dst, p1, p2));
+  else
+    ret.instructions.emplace_back(Instr(InstrType::GT, dst, p1, p2));
+  return dst;
+}
+template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<MaskOp, X, Y>>& expr){
+  RegName p1 = to_ssa(ret, static_cast<const Bop<MaskOp, X, Y>&>(expr).param1());
+  RegName p2 = to_ssa(ret, static_cast<const Bop<MaskOp, X, Y>&>(expr).param2());
+  const SSAregData& p1dat = ret.context.lookup(p1);
+  const SSAregData& p2dat = ret.context.lookup(p2);
+
+  assert(p1dat.mRows == p2dat.mRows && p1dat.mCols == p2dat.mCols);
+
+  RegName dst = ret.context.gen(nullptr, p1dat.mRows, p1dat.mCols);
+  ret.instructions.emplace_back(Instr(InstrType::Mask, dst, p1, p2));
+  return dst;
+}
 //TODO: expand operation here
 
 std::ostream& operator << (std::ostream& out, const SSA& ssa){
@@ -216,6 +262,12 @@ std::ostream& operator << (std::ostream& out, const SSA& ssa){
       break;
       case InstrType::Dot:
         out << instr.mDst << " <- " << instr.mSrc1 << " ^ " << instr.mSrc2 << "\n";
+      break;
+      case InstrType::Mask:
+        out << instr.mDst << " <- " << instr.mSrc1 << " & " << instr.mSrc2 << "\n";
+      break;
+      case InstrType::GT:
+        out << instr.mDst << " <- " << instr.mSrc1 << " > " << instr.mSrc2 << "\n";
       break;
       case InstrType::AddMC: {
         const SSAregData& arg1 = ssa.context.lookup(instr.mSrc1);
@@ -265,17 +317,29 @@ std::ostream& operator << (std::ostream& out, const SSA& ssa){
       case InstrType::EDivCM:
         out << instr.mDst << " <- " << ssa.context.lookup(instr.mSrc1).mVal << " / " << instr.mSrc2 << "\n";
       break;
+      case InstrType::GTMC:
+        out << instr.mDst << " <- " << instr.mSrc1 << " > " << ssa.context.lookup(instr.mSrc2).mVal << "\n";
+      break;
+      case InstrType::GTCM:
+        out << instr.mDst << " <- " << ssa.context.lookup(instr.mSrc1).mVal << " > " << instr.mSrc2 << "\n";
+      break;
       case InstrType::Trn:
         out << instr.mDst << " <- ~" << instr.mSrc1 << "\n";
       break;
-      case InstrType::Sigmoid:
-        out << instr.mDst << " <- sigmoid(" << instr.mSrc1 << ")\n";
+      case InstrType::Not:
+        out << instr.mDst << " <- ! " << instr.mSrc1 << "\n";
       break;
       case InstrType::Tanh:
         out << instr.mDst << " <- tanh(" << instr.mSrc1 << ")\n";
       break;
       case InstrType::Softmax:
         out << instr.mDst << " <- softmax(" << instr.mSrc1 << ")\n";
+      break;
+      case InstrType::Exp:
+        out << instr.mDst << " <- exp(" << instr.mSrc1 << ")\n";
+      break;
+      case InstrType::Isnan:
+        out << instr.mDst << " <- isnan(" << instr.mSrc1 << ")\n";
       break;
       //TODO: expand operation here
       default: assert(false);

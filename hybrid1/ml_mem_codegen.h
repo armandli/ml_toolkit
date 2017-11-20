@@ -167,7 +167,9 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
       case InstrType::Add:
       case InstrType::Sub:
       case InstrType::EMul:
-      case InstrType::EDiv: {
+      case InstrType::EDiv:
+      case InstrType::GT:
+      case InstrType::Mask: {
         double* s1 = find_mem(si.mSrc1);
         double* s2 = find_mem(si.mSrc2);
         double* d  = find_mem(si.mDst);
@@ -181,6 +183,8 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
           case InstrType::Sub:  SSE::sub_1d_sse_pd(d, s1, s2, roundup_row(s1size.rs), roundup_col(s1size.cs)); break;
           case InstrType::EMul: SSE::emul_1d_sse_pd(d, s1, s2, roundup_row(s1size.rs), roundup_col(s1size.cs)); break;
           case InstrType::EDiv: SSE::ediv_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
+          case InstrType::GT:   SSE::gt_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
+          case InstrType::Mask: SSE::mask_1d_sse_pd(d, s1, s2, roundup_row(s1size.rs), roundup_col(s1size.cs)); break;
           default: assert(false);
         }
       }
@@ -207,7 +211,8 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
       }
       break;
       case InstrType::SubMC:
-      case InstrType::EDivMC: {
+      case InstrType::EDivMC:
+      case InstrType::GTMC: {
         double* s1 = find_mem(si.mSrc1);
         double  s2 = ctx.lookup_val(si.mSrc2);
         double* d  = find_mem(si.mDst);
@@ -219,12 +224,14 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         switch (si.mType){
           case InstrType::SubMC:  SSE::sub_mc_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
           case InstrType::EDivMC: SSE::ediv_mc_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
+          case InstrType::GTMC:   SSE::gt_mc_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
           default: assert(false);
         }
       }
       break;
       case InstrType::SubCM:
-      case InstrType::EDivCM: {
+      case InstrType::EDivCM:
+      case InstrType::GTCM: {
         double s1  = ctx.lookup_val(si.mSrc1);
         double* s2 = find_mem(si.mSrc2);
         double* d  = find_mem(si.mDst);
@@ -236,6 +243,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         switch (si.mType){
           case InstrType::SubCM:  SSE::sub_cm_2d_sse_pd(s1, d, s2, s2size.rs, s2size.cs, roundup_col(s2size.cs)); break;
           case InstrType::EDivCM: SSE::ediv_cm_2d_sse_pd(s1, d, s2, s2size.rs, s2size.cs, roundup_col(s2size.cs)); break;
+          case InstrType::GTCM:   SSE::gt_cm_2d_sse_pd(s1, d, s2, s2size.rs, s2size.cs, roundup_col(s2size.cs)); break;
           default: assert(false);
         }
       }
@@ -276,7 +284,10 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
       break;
       case InstrType::Sigmoid:
       case InstrType::Tanh:
-      case InstrType::Softmax: {
+      case InstrType::Softmax:
+      case InstrType::Exp:
+      case InstrType::Not:
+      case InstrType::Isnan: {
         double* s1 = find_mem(si.mSrc1);
         double* d  = find_mem(si.mDst);
         assert(s1 != nullptr && d != nullptr);
@@ -288,6 +299,9 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
           case InstrType::Sigmoid: SSE::sigmoid_2d_sse_pd(d, s1, sz.rs, sz.cs, roundup_col(sz.cs)); break;
           case InstrType::Tanh:    SSE::tanh_1d_sse_pd(d, s1, sz.rs, roundup_col(sz.cs)); break;
           case InstrType::Softmax: SSE::softmax_r_2d_sse_pd(d, s1, sz.rs, roundup_col(sz.cs)); break;
+          case InstrType::Exp:     SSE::exp_2d_sse_pd(d, s1, sz.rs, sz.cs, roundup_col(sz.cs)); break;
+          case InstrType::Not:     SSE::not_2d_sse_pd(d, s1, sz.rs, sz.cs, roundup_col(sz.cs)); break;
+          case InstrType::Isnan:   SSE::isnan_1d_sse_pd(d, s1, roundup_row(sz.rs), roundup_col(sz.cs)); break;
           default: assert(false);
         }
       }

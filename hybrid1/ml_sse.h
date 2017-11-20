@@ -331,6 +331,111 @@ void ediv_cm_2d_sse_pd(double v, Dstp dst, Srcp src, size_t rows, size_t cols, s
   }
 }
 
+void exp_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t colstride){
+  for (size_t ir = 0; ir < rows; ++ir){
+    for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
+      __m256d a = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d r = SPPL::_mm256_fexp_pd(a);
+      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+    }
+    for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
+      double a = src[ir * colstride + ic];
+      dst[ir * colstride + ic] = std::exp(a);
+    }
+  }
+}
+
+//TODO: unit test
+void not_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t colstride){
+  for (size_t ir = 0; ir < rows; ++ir){
+    for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
+      __m256d a = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d r = _mm256_cmp_pd(a, zd1, _CMP_EQ_OQ);
+      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+    }
+    for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
+      if (src[ir * colstride + ic] == 0.)
+        dst[ir * colstride + ic] = *(double*)(long long*)&oned;
+      else
+        dst[ir * colstride + ic] = 0.;
+    }
+  }
+}
+
+//TODO: unit test
+void isnan_1d_sse_pd(Dstp dst, Srcp src, size_t rowstride, size_t colstride){
+  for (size_t i = 0; i < rowstride * colstride; i += MTX_BLOCK_RSZ){
+    __m256d a = _mm256_loadu_pd(&src[i]);
+    __m256d r = SPPL::_mm256_isnan_pd(a);
+    _mm256_storeu_pd(&dst[i], r);
+  }
+}
+
+//TODO: unit test
+void gt_2d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t cols, size_t colstride){
+  for (size_t ir = 0; ir < rows; ++ir){
+    for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
+      __m256d a = _mm256_loadu_pd(&s1[ir * colstride + ic]);
+      __m256d b = _mm256_loadu_pd(&s2[ir * colstride + ic]);
+      __m256d r = _mm256_cmp_pd(a, b, _CMP_GT_OQ);
+      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+    }
+    for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
+      if (s1[ir * colstride + ic] > s2[ir * colstride + ic])
+        dst[ir * colstride + ic] = *(double*)(long long*)&oned;
+      else
+        dst[ir * colstride + ic] = 0.;
+    }
+  }
+}
+
+//TODO: unit test
+void gt_mc_2d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t cols, size_t colstride){
+  const __m256d val = _mm256_set1_pd(v);
+  for (size_t ir = 0; ir < rows; ++ir){
+    for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
+      __m256d a = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d r = _mm256_cmp_pd(a, val, _CMP_GT_OQ);
+      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+    }
+    for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
+      if (src[ir * colstride + ic] > v)
+        dst[ir * colstride + ic] = *(double*)(long long*)&oned;
+      else
+        dst[ir * colstride + ic] = 0.;
+    }
+  }
+}
+
+//TODO: unit test
+void gt_cm_2d_sse_pd(double v, Dstp dst, Srcp src, size_t rows, size_t cols, size_t colstride){
+  const __m256d val = _mm256_set1_pd(v);
+  for (size_t ir = 0; ir < rows; ++ir){
+    for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
+      __m256d a = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d r = _mm256_cmp_pd(val, a, _CMP_GT_OQ);
+      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+    }
+    for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
+      if (v > src[ir * colstride + ic])
+        dst[ir * colstride + ic] = *(double*)(long long*)&oned;
+      else
+        dst[ir * colstride + ic] = 0.;
+    }
+  }
+
+}
+
+//TODO: unit test
+void mask_1d_sse_pd(Dstp dst, Srcp src, Srcp mask, size_t rowstride, size_t colstride){
+  for (size_t i = 0; i < rowstride * colstride; i += MTX_BLOCK_RSZ){
+    __m256d a = _mm256_loadu_pd(&src[i]);
+    __m256d m = _mm256_loadu_pd(&mask[i]);
+    __m256d r = _mm256_and_pd(a, m);
+    _mm256_storeu_pd(&dst[i], r);
+  }
+}
+
 //TODO: do not expose this interface
 double max_row_coeff_pd(Srcp src, size_t cols){
   __m256d maxv = _mm256_set1_pd(std::numeric_limits<double>::min());

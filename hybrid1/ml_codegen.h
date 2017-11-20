@@ -36,6 +36,13 @@ struct LocalValueNumberHash {
       case InstrType::EDivMC: pr[0] = 9; break;
       case InstrType::EDivCM: pr[0] = 10; break;
       case InstrType::Trn:    pr[0] = 11; break;
+      case InstrType::Not:    pr[0] = 12; break;
+      case InstrType::Exp:    pr[0] = 13; break;
+      case InstrType::Isnan:  pr[0] = 14; break;
+      case InstrType::Mask:   pr[0] = 15; break;
+      case InstrType::GT:     pr[0] = 16; break;
+      case InstrType::GTMC:   pr[0] = 17; break;
+      case InstrType::GTCM:   pr[0] = 18; break;
       //TODO: expand operations here
       default: assert(false);
     }

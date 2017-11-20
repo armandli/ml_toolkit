@@ -83,31 +83,31 @@ struct TrnOp {
     ss << "~";
   }
 };
+
 Uop<TrnOp, MtxRef> operator~(MtxRef&& a){
   return Uop<TrnOp, MtxRef>(std::move(a));
 }
-
 template <typename X>
 Uop<TrnOp, X> operator~(MtxBase<X>&& a){
   return Uop<TrnOp, X>(static_cast<X&&>(a));
 }
 /* END Transpose */
 
-/* BEGIN Sigmoid */
-struct SigmoidOp {
+/* BEGIN not */
+struct NotOp {
   static void debug(std::stringstream& ss){
-    ss << "sigmoid";
+    ss << "not";
   }
 };
 
-Uop<SigmoidOp, MtxRef> sigmoid(MtxRef&& a){
-  return Uop<SigmoidOp, MtxRef>(std::move(a));
+Uop<NotOp, MtxRef> operator not(MtxRef&& a){
+  return Uop<NotOp, MtxRef>(std::move(a));
 }
 template <typename X>
-Uop<SigmoidOp, X> sigmoid(MtxBase<X>&& a){
-  return Uop<SigmoidOp, X>(static_cast<X&&>(a));
+Uop<NotOp, X> operator not(MtxBase<X>&& a){
+  return Uop<NotOp, X>(static_cast<X&&>(a));
 }
-/* END Sigmoid */
+/* END not */
 
 /* BEGIN Tanh */
 struct TanhOp {
@@ -140,6 +140,38 @@ Uop<SoftmaxOp, X> softmax(MtxBase<X>&& a){
   return Uop<SoftmaxOp, X>(static_cast<X&&>(a));
 }
 /* END softmax */
+
+/* BEGIN exp */
+struct ExpOp {
+  static void debug(std::stringstream& ss){
+    ss << "exp";
+  }
+};
+
+Uop<ExpOp, MtxRef> exp(MtxRef&& a){
+  return Uop<ExpOp, MtxRef>(std::move(a));
+}
+template <typename X>
+Uop<ExpOp, X> exp(MtxBase<X>&& a){
+  return Uop<ExpOp, X>(static_cast<X&&>(a));
+}
+/* END exp */
+
+/* BEGIN isnan */
+struct IsnanOp {
+  static void debug(std::stringstream& ss){
+    ss << "isnan";
+  }
+};
+
+Uop<IsnanOp, MtxRef> isnan(MtxRef&& a){
+  return Uop<IsnanOp, MtxRef>(std::move(a));
+}
+template <typename X>
+Uop<IsnanOp, X> isnan(MtxBase<X>&& a){
+  return Uop<IsnanOp, X>(static_cast<X&&>(a));
+}
+/* END isnan */
 
 template <typename Op, typename X, typename Y>
 class Bop : public MtxBase<Bop<Op,X,Y>> {
@@ -320,6 +352,44 @@ Bop<DivOp, X, Y> operator/(MtxBase<X>&& a, MtxBase<Y>&& b){
 }
 /* END Element Divide */
 
+/* BEGIN Greater Than */
+struct GtOp {
+  static void debug(std::stringstream& ss){
+    ss << ">";
+  }
+};
+
+Bop<GtOp, MtxRef, Scl> operator>(MtxRef&& a, Scl&& b){
+  return Bop<GtOp, MtxRef, Scl>(std::move(a), std::move(b));
+}
+Bop<GtOp, Scl, MtxRef> operator>(Scl&& a, MtxRef&& b){
+  return Bop<GtOp, Scl, MtxRef>(std::move(a), std::move(b));
+}
+template <typename X>
+Bop<GtOp, Scl, X> operator>(Scl&& a, MtxBase<X>&& b){
+  return Bop<GtOp, Scl, X>(std::move(a), static_cast<X&&>(b));
+}
+template <typename X>
+Bop<GtOp, X, Scl> operator>(MtxBase<X>&& a, Scl&& b){
+  return Bop<GtOp, X, Scl>(static_cast<X&&>(a), std::move(b));
+}
+Bop<GtOp, MtxRef, MtxRef> operator>(MtxRef&& a, MtxRef&& b){
+  return Bop<GtOp, MtxRef, MtxRef>(std::move(a), std::move(b));
+}
+template <typename X>
+Bop<GtOp, X, MtxRef> operator>(MtxBase<X>&& a, MtxRef&& b){
+  return Bop<GtOp, X, MtxRef>(static_cast<X&&>(a), std::move(b));
+}
+template <typename X>
+Bop<GtOp, MtxRef, X> operator>(MtxRef&& a, MtxBase<X>&& b){
+  return Bop<GtOp, MtxRef, X>(std::move(a), static_cast<X&&>(b));
+}
+template <typename X, typename Y>
+Bop<GtOp, X, Y> operator>(MtxBase<X>&& a, MtxBase<Y>&& b){
+  return Bop<GtOp, X, Y>(static_cast<X&&>(a), static_cast<Y&&>(b));
+}
+/* END Greater Than */
+
 /* BEGIN Matrix Multiplication */
 struct DotOp {
   static void debug(std::stringstream& ss){
@@ -358,6 +428,45 @@ Bop<DotOp, X, Y> operator^(MtxBase<X>&& a, MtxBase<Y>&& b){
   return Bop<DotOp, X, Y>(static_cast<X&&>(a), static_cast<Y&&>(b));
 }
 /* END Matrix Multiplication */
+
+/* BEGIN Mask */
+struct MaskOp {
+  static void debug(std::stringstream& ss){
+    ss << "mask";
+  }
+};
+
+Bop<MaskOp, MtxRef, Scl> mask(MtxRef&&, Scl&&){
+  assert(!!!"mask cannot be applied to a matrix and a scalar");
+}
+Bop<MaskOp, Scl, MtxRef> mask(Scl&&, MtxRef&&){
+  assert(!!!"mask cannot be applied to a matrix and a scalar");
+}
+template <typename X>
+Bop<MaskOp, Scl, X> mask(Scl&&, MtxBase<X>&&){
+  assert(!!!"mask cannot be applied to a matrix and a scalar");
+}
+template <typename X>
+Bop<MaskOp, X, Scl> mask(MtxBase<X>&&, Scl&&){
+  assert(!!!"mask cannot be applied to a matrix and a scalar");
+}
+
+Bop<MaskOp, MtxRef, MtxRef> mask(MtxRef&& a, MtxRef&& b){
+  return Bop<MaskOp, MtxRef, MtxRef>(std::move(a), std::move(b));
+}
+template <typename X>
+Bop<MaskOp, X, MtxRef> mask(MtxBase<X>&& a, MtxRef&& b){
+  return Bop<MaskOp, X, MtxRef>(static_cast<X&&>(a), std::move(b));
+}
+template <typename X>
+Bop<MaskOp, MtxRef, X> mask(MtxRef&& a, MtxBase<X>&& b){
+  return Bop<MaskOp, MtxRef, X>(std::move(a), static_cast<X&&>(b));
+}
+template <typename X, typename Y>
+Bop<MaskOp, X, Y> mask(MtxBase<X>&& a, MtxBase<Y>&& b){
+  return Bop<MaskOp, X, Y>(static_cast<X&&>(a), static_cast<Y&&>(b));
+}
+/* END Mask */
 
 //TODO: expand operation here
 

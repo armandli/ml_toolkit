@@ -44,14 +44,22 @@ enum class InstrType : unsigned {
   EMulMC,
   EDivMC,
   EDivCM,
+  GT,
+  GTMC,
+  GTCM,
+  Mask,
   Trn,
-  Sigmoid,
+  Not,
   Tanh,
   Softmax,
+  Exp,
+  Isnan,
   //TODO: expand operation here
   //Following Instruction only applies to GPU side
   CopyTo,
   CopyFrom,
+  //Complex Instructions (not present in SSA)
+  Sigmoid,
 };
 
 struct Instr {

@@ -208,7 +208,9 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
       case InstrType::Add:
       case InstrType::Sub:
       case InstrType::EMul:
-      case InstrType::EDiv: {
+      case InstrType::EDiv:
+      case InstrType::GT:
+      case InstrType::Mask: {
         double* s1 = find_mem(si.mSrc1);
         double* s2 = find_mem(si.mSrc2);
         double* d  = find_mem(si.mDst);
@@ -221,6 +223,8 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
           case InstrType::Sub:  CUDA::sub_1d_cuda_pd(d, s1, s2, roundup_row(s1size.rs), roundup_col(s1size.cs)); break;
           case InstrType::EMul: CUDA::emul_1d_cuda_pd(d, s1, s2, roundup_row(s1size.rs), roundup_col(s1size.cs)); break;
           case InstrType::EDiv: CUDA::ediv_2d_cuda_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_row(s1size.rs), roundup_col(s1size.cs)); break;
+          case InstrType::GT:   CUDA::gt_2d_cuda_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_row(s1size.rs), roundup_col(s1size.cs)); break;
+          case InstrType::Mask: CUDA::mask_2d_cuda_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_row(s1size.rs), roundup_col(s1size.cs)); break; //TODO: is this right?
           default: assert(false);
         }
       }
@@ -247,7 +251,8 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
       }
       break;
       case InstrType::SubMC:
-      case InstrType::EDivMC: {
+      case InstrType::EDivMC:
+      case InstrType::GTMC: {
         double* s1 = find_mem(si.mSrc1);
         double  s2 = ctx.lookup_val(si.mSrc2);
         double* d  = find_mem(si.mDst);
@@ -258,12 +263,14 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
         switch (si.mType){
           case InstrType::SubMC:  CUDA::sub_mc_2d_cuda_pd(d, s1, s2, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col(sz.cs)); break;
           case InstrType::EDivMC: CUDA::ediv_mc_2d_cuda_pd(d, s2, s2, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col(sz.cs)); break;
+          case InstrType::GTMC:   CUDA::gt_mc_2d_cuda_pd(d, s1, s2, sz.rs, sz.cs, rondup_row(sz.rs), roundup_col(sz.cs)); break;
           default: assert(false);
         }
       }
       break;
       case InstrType::SubCM:
-      case InstrType::EDivCM: {
+      case InstrType::EDivCM:
+      case InstrType::GTCM: {
         double  s1 = ctx.lookup_val(si.mSrc1);
         double* s2 = find_mem(si.mSrc2);
         double* d  = find_mem(si.mDst);
@@ -274,6 +281,7 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
         switch (si.mType){
           case InstrType::SubCM:  CUDA::sub_cm_2d_cuda_pd(d, s1, s2, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col(sz.cs)); break;
           case InstrType::EDivCM: CUDA::ediv_cm_2d_cuda_pd(d, s1, s2, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col(sz.cs)); break;
+          case InstrType::GTCM:   CUDA::gt_cm_2d_cuda_pd(d, s1, s2, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col(sz.cs)); break;
           default: assert(false);
         }
       }
@@ -312,15 +320,20 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
       }
       break;
       case InstrType::Sigmoid:
-      case InstrType::Tanh: {
+      case InstrType::Tanh:
+      case InstrType::Exp:
+      case InstrType::Not: {
         double* s1 = find_mem(si.mSrc1);
         double* d  = find_mem(si.mDst);
         assert(s1 != nullptr && d != nullptr);
         RegSize sz = find_size(s1);
         ctx.setRegSize(si.mDst, sz.rs, sz.cs);
         switch (si.mType){
-          case InstrType::Sigmoid: CUDA::sigmoid_2d_cuda_pd(d, s1, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col_sz.cs); break;
+          case InstrType::Sigmoid: CUDA::sigmoid_2d_cuda_pd(d, s1, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col(sz.cs)); break;
           case InstrType::Tanh:    CUDA::tanh_1d_cuda_pd(d, s1, roundup_row(sz.rs), roundup_col(sz.cs)); break;
+          case InstrType::Exp:     CUDA::exp_2d_cuda_pd(d, s1, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col(sz.cs)); break;
+          case InstrType::Not:     CUDA::not_2d_cuda_pd(d, s1, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col(sz.cs)); break;
+          case InstrType::Isnan:   CUDA::isnan_2d_cuda_pd(d, s1, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col(sz.cs)); break;
           default: assert(false);
         }
       }
