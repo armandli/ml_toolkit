@@ -179,7 +179,7 @@ void select_instruction(SSA& ssa){
   std::vector<Instr> nins, segment;
   std::vector<bool> done(ssa.instructions.size(), false);
   std::vector<LiveSet> lv = analyze_liveness(ssa);
-  const size_t maxLookahead = 10;
+  const size_t maxLookahead = 16;
 
   class InstructionMatcher {
     std::vector<Instr>&         segment;

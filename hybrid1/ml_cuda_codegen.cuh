@@ -368,6 +368,8 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
 void cudavaluateSSA(SSA& ssa, CUDArena& arena){
   local_value_numbering(ssa);
 
+  select_instruction(ssa);
+
   RegSize regsize = estimate_register_size(ssa);
   std::vector<LiveSet> lv = analyze_liveness(ssa);
   size_t minregs = estimate_cuda_local_registers(ssa, lv);

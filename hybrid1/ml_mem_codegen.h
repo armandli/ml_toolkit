@@ -335,7 +335,13 @@ void memvaluateSSA(SSA& ssa, MemArena& arena){
   local_value_numbering(ssa);
 
   //GOTHERE
-  std::cout << "After Optimization: " << std::endl;
+  std::cout << "After Local Value Numbering: " << std::endl;
+  std::cout << ssa;
+
+  select_instruction(ssa);
+
+  //GOTHERE
+  std::cout << "After Peephole Optimization: " << std::endl;
   std::cout << ssa;
 
   RegSize regsize = estimate_register_size(ssa);
