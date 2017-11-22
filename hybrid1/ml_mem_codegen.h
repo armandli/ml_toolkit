@@ -169,7 +169,8 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
       case InstrType::EMul:
       case InstrType::EDiv:
       case InstrType::GT:
-      case InstrType::Mask: {
+      case InstrType::Mask:
+      case InstrType::DRelu: {
         double* s1 = find_mem(si.mSrc1);
         double* s2 = find_mem(si.mSrc2);
         double* d  = find_mem(si.mDst);
@@ -185,6 +186,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
           case InstrType::EDiv: SSE::ediv_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
           case InstrType::GT:   SSE::gt_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
           case InstrType::Mask: SSE::mask_1d_sse_pd(d, s1, s2, roundup_row(s1size.rs), roundup_col(s1size.cs)); break;
+          case InstrType::DRelu:SSE::drelu_1d_sse_pd(d, s1, s2, s1size.rs, roundup_col(s1size.cs)); break;
           default: assert(false);
         }
       }
@@ -212,7 +214,8 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
       break;
       case InstrType::SubMC:
       case InstrType::EDivMC:
-      case InstrType::GTMC: {
+      case InstrType::GTMC:
+      case InstrType::GT0MC: {
         double* s1 = find_mem(si.mSrc1);
         double  s2 = ctx.lookup_val(si.mSrc2);
         double* d  = find_mem(si.mDst);
@@ -225,13 +228,15 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
           case InstrType::SubMC:  SSE::sub_mc_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
           case InstrType::EDivMC: SSE::ediv_mc_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
           case InstrType::GTMC:   SSE::gt_mc_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
+          case InstrType::GT0MC:  SSE::gt0_mc_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
           default: assert(false);
         }
       }
       break;
       case InstrType::SubCM:
       case InstrType::EDivCM:
-      case InstrType::GTCM: {
+      case InstrType::GTCM:
+      case InstrType::GT0CM: {
         double s1  = ctx.lookup_val(si.mSrc1);
         double* s2 = find_mem(si.mSrc2);
         double* d  = find_mem(si.mDst);
@@ -244,6 +249,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
           case InstrType::SubCM:  SSE::sub_cm_2d_sse_pd(s1, d, s2, s2size.rs, s2size.cs, roundup_col(s2size.cs)); break;
           case InstrType::EDivCM: SSE::ediv_cm_2d_sse_pd(s1, d, s2, s2size.rs, s2size.cs, roundup_col(s2size.cs)); break;
           case InstrType::GTCM:   SSE::gt_cm_2d_sse_pd(s1, d, s2, s2size.rs, s2size.cs, roundup_col(s2size.cs)); break;
+          case InstrType::GT0CM:  SSE::gt0_cm_2d_sse_pd(s1, s2, s2, s2size.rs, s2size.cs, roundup_col(s2size.cs)); break;
           default: assert(false);
         }
       }
@@ -282,12 +288,12 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         SSE::transpose4x4_2d_sse_pd(d, s1, roundup_row(s1size.rs), roundup_col(s1size.cs));
       }
       break;
-      case InstrType::Sigmoid:
       case InstrType::Tanh:
       case InstrType::Softmax:
       case InstrType::Exp:
       case InstrType::Not:
-      case InstrType::Isnan: {
+      case InstrType::Isnan:
+      case InstrType::Isnan0: {
         double* s1 = find_mem(si.mSrc1);
         double* d  = find_mem(si.mDst);
         assert(s1 != nullptr && d != nullptr);
@@ -296,12 +302,12 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         if (ctx.type(si.mDst) == RegType::Reg)
           ctx.setRegSize(si.mDst, sz.rs, sz.cs);
         switch (si.mType){
-          case InstrType::Sigmoid: SSE::sigmoid_2d_sse_pd(d, s1, sz.rs, sz.cs, roundup_col(sz.cs)); break;
           case InstrType::Tanh:    SSE::tanh_1d_sse_pd(d, s1, sz.rs, roundup_col(sz.cs)); break;
           case InstrType::Softmax: SSE::softmax_r_2d_sse_pd(d, s1, sz.rs, roundup_col(sz.cs)); break;
           case InstrType::Exp:     SSE::exp_2d_sse_pd(d, s1, sz.rs, sz.cs, roundup_col(sz.cs)); break;
           case InstrType::Not:     SSE::not_2d_sse_pd(d, s1, sz.rs, sz.cs, roundup_col(sz.cs)); break;
-          case InstrType::Isnan:   SSE::isnan_1d_sse_pd(d, s1, roundup_row(sz.rs), roundup_col(sz.cs)); break;
+          case InstrType::Isnan:   SSE::isnan_2d_sse_pd(d, s1, sz.rs, sz.cs, roundup_col(sz.cs)); break;
+          case InstrType::Isnan0:  SSE::isnan0_2d_sse_pd(d, s1, sz.rs, sz.cs, roundup_col(sz.cs)); break;
           default: assert(false);
         }
       }
@@ -327,7 +333,7 @@ void memvaluateSSA(SSA& ssa, MemArena& arena){
   RegSize regsize = estimate_register_size(ssa);
   std::vector<LiveSet> liveness = analyze_liveness(ssa);
   size_t minregs = estimate_cpu_local_registers(ssa, liveness);
-  arena.reset(regsize.rs * regsize.cs, minregs);
+  arena.reserve(regsize.rs * regsize.cs, minregs);
   MemInstrContext context(arena, regsize, minregs);
 
 //  //GOTHERE

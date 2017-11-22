@@ -24,26 +24,30 @@ struct LocalValueNumberHash {
     unsigned long long ret = 0;
     char*              pr  = (char*)&ret;
     switch (instr.mType){
-      case InstrType::Add:    pr[0] = 0; break;
-      case InstrType::Sub:    pr[0] = 1; break;
-      case InstrType::EMul:   pr[0] = 2; break;
-      case InstrType::EDiv:   pr[0] = 3; break;
-      case InstrType::Dot:    pr[0] = 4; break;
-      case InstrType::AddMC:  pr[0] = 5; break;
-      case InstrType::SubMC:  pr[0] = 6; break;
-      case InstrType::SubCM:  pr[0] = 7; break;
-      case InstrType::EMulMC: pr[0] = 8; break;
-      case InstrType::EDivMC: pr[0] = 9; break;
-      case InstrType::EDivCM: pr[0] = 10; break;
-      case InstrType::Trn:    pr[0] = 11; break;
-      case InstrType::Not:    pr[0] = 12; break;
-      case InstrType::Exp:    pr[0] = 13; break;
-      case InstrType::Isnan:  pr[0] = 14; break;
-      case InstrType::Mask:   pr[0] = 15; break;
-      case InstrType::GT:     pr[0] = 16; break;
-      case InstrType::GTMC:   pr[0] = 17; break;
-      case InstrType::GTCM:   pr[0] = 18; break;
-      //TODO: expand operations here
+      case InstrType::Add:        pr[0] = 0; break;
+      case InstrType::Sub:        pr[0] = 1; break;
+      case InstrType::EMul:       pr[0] = 2; break;
+      case InstrType::EDiv:       pr[0] = 3; break;
+      case InstrType::Dot:        pr[0] = 4; break;
+      case InstrType::AddMC:      pr[0] = 5; break;
+      case InstrType::SubMC:      pr[0] = 6; break;
+      case InstrType::SubCM:      pr[0] = 7; break;
+      case InstrType::EMulMC:     pr[0] = 8; break;
+      case InstrType::EDivMC:     pr[0] = 9; break;
+      case InstrType::EDivCM:     pr[0] = 10; break;
+      case InstrType::Trn:        pr[0] = 11; break;
+      case InstrType::Not:        pr[0] = 12; break;
+      case InstrType::Exp:        pr[0] = 13; break;
+      case InstrType::Isnan:      pr[0] = 14; break;
+      case InstrType::Mask:       pr[0] = 15; break;
+      case InstrType::GT:         pr[0] = 16; break;
+      case InstrType::GTMC:       pr[0] = 17; break;
+      case InstrType::GTCM:       pr[0] = 18; break;
+      case InstrType::Isnan0:     pr[0] = 19; break;
+      case InstrType::GT0MC:      pr[0] = 20; break;
+      case InstrType::GT0CM:      pr[0] = 21; break;
+      case InstrType::DRelu:      pr[0] = 22; break;
+      //TODO: expand operation here
       default: assert(false);
     }
     memcpy(pr + 1, instr.mSrc1.name + 1, RegName::Len - 1);
@@ -53,7 +57,6 @@ struct LocalValueNumberHash {
   }
 };
 
-//TODO: make sure matrix operation such as add and multiply uses the same ordering between matrix or matrix and scalar, i.e. a + b can be optimized away if b + a exist
 //benefits:
 //  eliminate dead code
 void local_value_numbering(SSA& ssa){
@@ -69,6 +72,31 @@ void local_value_numbering(SSA& ssa){
     else                 recon.mSrc1 = instr.mSrc1;
     if (rs2 != as.end()) recon.mSrc2 = (*rs2).second;
     else                 recon.mSrc2 = instr.mSrc2;
+
+    switch (recon.mType){
+      // ascending register number order
+      case InstrType::Add: case InstrType::EMul:
+        if (recon.mSrc2 < recon.mSrc1)
+          std::swap(recon.mSrc1, recon.mSrc2);
+      break;
+      // constant value always goes second
+      case InstrType::AddMC: case InstrType::EMulMC:
+        if (ssa.context.lookup(instr.mSrc1).mType == SSAregType::Scl)
+          std::swap(recon.mSrc1, recon.mSrc2);
+      break;
+      // cases where order does matter
+      case InstrType::Sub: case InstrType::EDiv: case InstrType::Dot: case InstrType::GT: case InstrType::Mask:
+      case InstrType::DRelu:
+      case InstrType::SubMC: case InstrType::SubCM: case InstrType::EDivMC: case InstrType::EDivCM:
+      case InstrType::GTMC: case InstrType::GTCM: case InstrType::GT0MC: case InstrType::GT0CM:
+      case InstrType::Trn: case InstrType::Not: case InstrType::Tanh: case InstrType::Softmax:
+      case InstrType::Exp: case InstrType::Isnan: case InstrType::Isnan0:
+        /* DO NOTHING */
+      break;
+      //TODO: expand operation here
+      // cases where we should not see during local value numbering
+      default: assert(false);
+    }
 
     decltype(vn)::iterator f = vn.find(recon);
     if (f == vn.end()){
@@ -141,6 +169,13 @@ std::vector<LiveSet> analyze_liveness(SSA& ssa){
     }
   }
   return res;
+}
+
+//benefit:
+//  reduce both register pressure as well as computation speed by condensing well known operations 
+//  into bigger CISC instructions that can do a faster job
+void select_instruction(SSA& ssa){
+  //TODO
 }
 
 enum class RegType : unsigned {

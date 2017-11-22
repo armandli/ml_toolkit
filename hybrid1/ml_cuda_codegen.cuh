@@ -319,21 +319,20 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
         CUDA::transpose_2d_cuda_pd(d, s1, roundup_row(sz.rs), roundup_col(sz.cs));
       }
       break;
-      case InstrType::Sigmoid:
       case InstrType::Tanh:
       case InstrType::Exp:
-      case InstrType::Not: {
+      case InstrType::Not:
+      case InstrType::Isnan: {
         double* s1 = find_mem(si.mSrc1);
         double* d  = find_mem(si.mDst);
         assert(s1 != nullptr && d != nullptr);
         RegSize sz = find_size(s1);
         ctx.setRegSize(si.mDst, sz.rs, sz.cs);
         switch (si.mType){
-          case InstrType::Sigmoid: CUDA::sigmoid_2d_cuda_pd(d, s1, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col(sz.cs)); break;
-          case InstrType::Tanh:    CUDA::tanh_1d_cuda_pd(d, s1, roundup_row(sz.rs), roundup_col(sz.cs)); break;
-          case InstrType::Exp:     CUDA::exp_2d_cuda_pd(d, s1, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col(sz.cs)); break;
-          case InstrType::Not:     CUDA::not_2d_cuda_pd(d, s1, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col(sz.cs)); break;
-          case InstrType::Isnan:   CUDA::isnan_2d_cuda_pd(d, s1, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col(sz.cs)); break;
+          case InstrType::Tanh:  CUDA::tanh_1d_cuda_pd(d, s1, roundup_row(sz.rs), roundup_col(sz.cs)); break;
+          case InstrType::Exp:   CUDA::exp_2d_cuda_pd(d, s1, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col(sz.cs)); break;
+          case InstrType::Not:   CUDA::not_2d_cuda_pd(d, s1, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col(sz.cs)); break;
+          case InstrType::Isnan: CUDA::isnan_2d_cuda_pd(d, s1, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col(sz.cs)); break;
           default: assert(false);
         }
       }

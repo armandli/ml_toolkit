@@ -12,7 +12,7 @@ OPT= -O3 -ftree-vectorize -march=native -mfpmath=sse
 
 LIBS=-lopenblas -lpthread -lgfortran
 
-INCLUDES=-I../ -I./ -I/user/include
+INCLUDES=-I../ -I./ -I/usr/include
 
 CXXFLAGS=-std=c++14 -MD -Wall -Wextra -pthread $(INCLUDES) $(LIBS) $(OPT) $(DEBUG)
 

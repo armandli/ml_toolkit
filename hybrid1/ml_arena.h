@@ -23,7 +23,7 @@ public:
       delete[] mMem;
   }
 
-  void reset(size_t regsize, size_t count){
+  void reserve(size_t regsize, size_t count){
     size_t expect = regsize * count;
     if (mSize < expect){
       if (mMem != nullptr)

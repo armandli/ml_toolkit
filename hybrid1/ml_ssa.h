@@ -133,6 +133,14 @@ template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<IsnanOp, X>>& e
   ret.instructions.emplace_back(Instr(InstrType::Isnan, dst, p1, p2));
   return dst;
 }
+template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<Isnan0Op, X>>& expr){
+  RegName p1 = to_ssa(ret, static_cast<const Uop<Isnan0Op, X>&>(expr).param());
+  const SSAregData& p1dat = ret.context.lookup(p1);
+  RegName p2;
+  RegName dst = ret.context.gen(nullptr, p1dat.mRows, p1dat.mCols);
+  ret.instructions.emplace_back(Instr(InstrType::Isnan0, dst, p1, p2));
+  return dst;
+}
 template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<AddOp, X, Y>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Bop<AddOp, X, Y>&>(expr).param1());
   RegName p2 = to_ssa(ret, static_cast<const Bop<AddOp, X, Y>&>(expr).param2());
@@ -231,6 +239,22 @@ template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<GtO
     ret.instructions.emplace_back(Instr(InstrType::GT, dst, p1, p2));
   return dst;
 }
+template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<Gt0Op, X, Y>>& expr){
+  RegName p1 = to_ssa(ret, static_cast<const Bop<Gt0Op, X, Y>&>(expr).param1());
+  RegName p2 = to_ssa(ret, static_cast<const Bop<Gt0Op, X, Y>&>(expr).param2());
+  const SSAregData& p1dat = ret.context.lookup(p1);
+  const SSAregData& p2dat = ret.context.lookup(p2);
+
+  assert((p1dat.mRows > 1 && p1dat.mCols > 1) || (p2dat.mRows > 1 && p2dat.mCols > 1));
+
+  RegName dst = ret.context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
+
+  if (p1dat.mType == SSAregType::Scl)
+    ret.instructions.emplace_back(Instr(InstrType::GT0CM, dst, p1, p2));
+  else
+    ret.instructions.emplace_back(Instr(InstrType::GT0MC, dst, p1, p2));
+  return dst;
+}
 template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<MaskOp, X, Y>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Bop<MaskOp, X, Y>&>(expr).param1());
   RegName p2 = to_ssa(ret, static_cast<const Bop<MaskOp, X, Y>&>(expr).param2());
@@ -241,6 +265,18 @@ template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<Mas
 
   RegName dst = ret.context.gen(nullptr, p1dat.mRows, p1dat.mCols);
   ret.instructions.emplace_back(Instr(InstrType::Mask, dst, p1, p2));
+  return dst;
+}
+template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<DReluOp, X, Y>>& expr){
+  RegName p1 = to_ssa(ret, static_cast<const Bop<DReluOp, X, Y>&>(expr).param1());
+  RegName p2 = to_ssa(ret, static_cast<const Bop<DReluOp, X, Y>&>(expr).param2());
+  const SSAregData& p1dat = ret.context.lookup(p1);
+  const SSAregData& p2dat = ret.context.lookup(p2);
+
+  assert(p1dat.mRows == p2dat.mRows && p1dat.mCols == p2dat.mCols);
+
+  RegName dst = ret.context.gen(nullptr, p1dat.mRows, p1dat.mCols);
+  ret.instructions.emplace_back(Instr(InstrType::DRelu, dst, p1, p2));
   return dst;
 }
 //TODO: expand operation here
@@ -268,6 +304,9 @@ std::ostream& operator << (std::ostream& out, const SSA& ssa){
       break;
       case InstrType::GT:
         out << instr.mDst << " <- " << instr.mSrc1 << " > " << instr.mSrc2 << "\n";
+      break;
+      case InstrType::DRelu:
+        out << instr.mDst << " <- " << instr.mSrc1 << " drelu " << instr.mSrc2 << "\n";
       break;
       case InstrType::AddMC: {
         const SSAregData& arg1 = ssa.context.lookup(instr.mSrc1);
@@ -323,6 +362,12 @@ std::ostream& operator << (std::ostream& out, const SSA& ssa){
       case InstrType::GTCM:
         out << instr.mDst << " <- " << ssa.context.lookup(instr.mSrc1).mVal << " > " << instr.mSrc2 << "\n";
       break;
+      case InstrType::GT0MC:
+        out << instr.mDst << " <- " << instr.mSrc1 << " >0 " << ssa.context.lookup(instr.mSrc2).mVal << "\n";
+      break;
+      case InstrType::GT0CM:
+        out << instr.mDst << " <- " << ssa.context.lookup(instr.mSrc1).mVal << " >0 " << instr.mSrc2 << "\n";
+      break;
       case InstrType::Trn:
         out << instr.mDst << " <- ~" << instr.mSrc1 << "\n";
       break;
@@ -340,6 +385,9 @@ std::ostream& operator << (std::ostream& out, const SSA& ssa){
       break;
       case InstrType::Isnan:
         out << instr.mDst << " <- isnan(" << instr.mSrc1 << ")\n";
+      break;
+      case InstrType::Isnan0:
+        out << instr.mDst << " <- isnan0(" << instr.mSrc1 << ")\n";
       break;
       //TODO: expand operation here
       default: assert(false);

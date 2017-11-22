@@ -173,6 +173,22 @@ Uop<IsnanOp, X> isnan(MtxBase<X>&& a){
 }
 /* END isnan */
 
+/* BEGIN isnan then 0 */
+struct Isnan0Op {
+  static void debug(std::stringstream& ss){
+    ss << "isnan0";
+  }
+};
+
+Uop<Isnan0Op, MtxRef> isnan0(MtxRef&& a){
+  return Uop<Isnan0Op, MtxRef>(std::move(a));
+}
+template <typename X>
+Uop<Isnan0Op, X> isnan0(MtxBase<X>&& a){
+  return Uop<Isnan0Op, X>(static_cast<X&&>(a));
+}
+/* END isnan then 0 */
+
 template <typename Op, typename X, typename Y>
 class Bop : public MtxBase<Bop<Op,X,Y>> {
   X mx;
@@ -390,6 +406,45 @@ Bop<GtOp, X, Y> operator>(MtxBase<X>&& a, MtxBase<Y>&& b){
 }
 /* END Greater Than */
 
+/* BEGIN Greater Than Or 0 */
+struct Gt0Op {
+  static void debug(std::stringstream& ss){
+    ss << ">0";
+  }
+};
+
+Bop<Gt0Op, MtxRef, MtxRef> gt0(MtxRef&&, MtxRef&&){
+  assert(!!!"gt0 can only be applied to a matrix and a constant");
+}
+template <typename X>
+Bop<Gt0Op, X, MtxRef> gt0(MtxBase<X>&&, MtxRef&&){
+  assert(!!!"gt0 can only be applied to a matrix and a constant");
+}
+template <typename X>
+Bop<Gt0Op, MtxRef, X> gt0(MtxRef&&, MtxBase<X>&&){
+  assert(!!!"gt0 can only be applied to a matrix and a constant");
+}
+template <typename X, typename Y>
+Bop<Gt0Op, X, Y> gt0(MtxBase<X>&&, MtxBase<Y>&&){
+  assert(!!!"gt0 can only be applied to a matrix and a constant");
+}
+
+Bop<Gt0Op, MtxRef, Scl> gt0(MtxRef&& a, Scl&& b){
+  return Bop<Gt0Op, MtxRef, Scl>(std::move(a), std::move(b));
+}
+Bop<Gt0Op, Scl, MtxRef> gt0(Scl&& a, MtxRef&& b){
+  return Bop<Gt0Op, Scl, MtxRef>(std::move(a), std::move(b));
+}
+template <typename X>
+Bop<Gt0Op, X, Scl> gt0(MtxBase<X>&& a, Scl&& b){
+  return Bop<Gt0Op, X, Scl>(static_cast<X&&>(a), std::move(b));
+}
+template <typename X>
+Bop<Gt0Op, Scl, X> gt0(Scl&& a, MtxBase<X>&& b){
+  return Bop<Gt0Op, Scl, X>(std::move(a), static_cast<X&&>(b));
+}
+/* END Greater Than Or 0 */
+
 /* BEGIN Matrix Multiplication */
 struct DotOp {
   static void debug(std::stringstream& ss){
@@ -467,6 +522,45 @@ Bop<MaskOp, X, Y> mask(MtxBase<X>&& a, MtxBase<Y>&& b){
   return Bop<MaskOp, X, Y>(static_cast<X&&>(a), static_cast<Y&&>(b));
 }
 /* END Mask */
+
+/* BEGIN drelu */
+struct DReluOp {
+  static void debug(std::stringstream& ss){
+    ss << "drelu";
+  }
+};
+
+Bop<DReluOp, MtxRef, Scl> drelu(MtxRef&&, Scl&&){
+  assert(!!!"drelu cannot be applied to a matrix and a scalar");
+}
+Bop<DReluOp, Scl, MtxRef> drelu(Scl&&, MtxRef&&){
+  assert(!!!"drelu cannot be applied to a matrix and a scalar");
+}
+template <typename X>
+Bop<DReluOp, X, Scl> drelu(MtxBase<X>&&, Scl&&){
+  assert(!!!"drelu cannot be applied to a matrix and a scalar");
+}
+template <typename X>
+Bop<DReluOp, Scl, X> drelu(Scl&&, MtxBase<X>&&){
+  assert(!!!"drelu cannot be applied to a matrix and a scalar");
+}
+
+Bop<DReluOp, MtxRef, MtxRef> drelu(MtxRef&& a, MtxRef&& b){
+  return Bop<DReluOp, MtxRef, MtxRef>(std::move(a), std::move(b));
+}
+template <typename X>
+Bop<DReluOp, X, MtxRef> drelu(MtxBase<X>&& a, MtxRef&& b){
+  return Bop<DReluOp, X, MtxRef>(static_cast<X&&>(a), std::move(b));
+}
+template <typename X>
+Bop<DReluOp, MtxRef, X> drelu(MtxRef&& a, MtxBase<X>&& b){
+  return Bop<DReluOp, MtxRef, X>(std::move(a), static_cast<X&&>(b));
+}
+template <typename X, typename Y>
+Bop<DReluOp, X, Y> drelu(MtxBase<X>&& a, MtxBase<Y>&& b){
+  return Bop<DReluOp, X, Y>(static_cast<X&&>(a), static_cast<Y&&>(b));
+}
+/* END drelu */
 
 //TODO: expand operation here
 
