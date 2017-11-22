@@ -604,11 +604,47 @@ void sigmoid_2d_sse_pd(Dstp dst, Srcp m, size_t rows, size_t cols, size_t colstr
   }
 }
 
+void dsigmoid_2d_sse_pd(Dstp dst, Srcp dm, Srcp m, size_t rows, size_t cols, size_t colstride){
+  for (size_t ir = 0; ir < rows; ++ir){
+    for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
+      __m256d a = _mm256_loadu_pd(&m[ir * colstride + ic]);
+      __m256d c = _mm256_sub_pd(pd1, a);
+      __m256d b = _mm256_loadu_pd(&dm[ir * colstride + ic]);
+      __m256d d = _mm256_mul_pd(b, a);
+      __m256d r = _mm256_mul_pd(d, c);
+      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+    }
+    for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
+      double a = dm[ir * colstride + ic];
+      double b = m[ir * colstride + ic];
+      dst[ir * colstride + ic] = a * b * (1. - b);
+    }
+  }
+}
+
 void tanh_1d_sse_pd(Dstp dst, Srcp m, size_t rows, size_t colstride){
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
     __m256d a = _mm256_loadu_pd(&m[i]);
     __m256d r = SPPL::_mm256_tanh_pd(a);
     _mm256_storeu_pd(&dst[i], r);
+  }
+}
+
+void dtanh_2d_sse_pd(Dstp dst, Srcp dm, Srcp m, size_t rows, size_t cols, size_t colstride){
+  for (size_t ir = 0; ir < rows; ++ir){
+    for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
+      __m256d a = _mm256_loadu_pd(&m[ir * colstride + ic]);
+      __m256d b = _mm256_mul_pd(a, a);
+      __m256d c = _mm256_sub_pd(pd1, b);
+      __m256d d = _mm256_loadu_pd(&dm[ir * colstride + ic]);
+      __m256d r = _mm256_mul_pd(d, c);
+      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+    }
+    for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
+      double a = m[ir * colstride + ic];
+      double b = dm[ir * colstride + ic];
+      dst[ir * colstride + ic] = b * (1. - a * a);
+    }
   }
 }
 

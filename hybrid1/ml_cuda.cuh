@@ -1136,6 +1136,33 @@ void sigmoid_2d_cuda_pd(double* dst, const double* src, size_t rows, size_t cols
   sigmoid_2d_cukernel_pd<<< blocks, tpb >>>(dst, src, rows, cols, colstride);
 }
 
+//TODO: unit test
+// deriviative of sigmoid operation
+__global__ void dsigmoid_2d_cukernel_pd(double* dst, const double* dm, const double* m, size_t rows, size_t cols, size_t colstride){
+  const size_t rowid = blockDim.y * blockIdx.y + threadIdx.y;
+
+  if (rowid >= rows) return;
+
+  const size_t idmax = rowid * colstride + cols;
+  const size_t inc = blockDim.x * gridDim.x;
+
+  size_t id = rowid * colstride + blockDim.x * blockIdx.x + threadIdx.x;
+
+  while (id < idmax){
+    double a = dm[id];
+    double b = m[id];
+    dst[id] = a * b * (1. - b);
+    id += inc;
+  }
+}
+
+void dsigmoid_2d_cuda_pd(double* dst, const double* dm, const double* m, size_t rows, size_t cols, size_t rowstride, size_t colstride){
+  BlkSz bs = get_gpu_block_size(rowstride, colstride);
+  dim3 tpb(bs.cpb, bs.rpb);
+  dim3 blocks(std::max(colstride / bs.cpb / CUDA_SLICE_SZ, 1UL), rowstride / bs.rpb);
+  dsigmoid_2d_cukernel_pd<<<blocks, tpb>>>(dst, dm, m, rows, cols, colstride);
+}
+
 // tanh block operation
 __global__ void tanh_1d_cukernel_pd(double* dst, const double* src, size_t sz){
   const size_t inc = blockDim.x * gridDim.x;
@@ -1152,6 +1179,33 @@ void tanh_1d_cuda_pd(double* dst, const double* src, size_t rowstride, size_t co
   dim3 tpb(CUDA_MAX_TSZ);
   dim3 blocks(std::max(sz / CUDA_MAX_TSZ / CUDA_SLICE_SZ, 1UL));
   tanh_1d_cukernel_pd<<< blocks, tpb >>>(dst, src, sz);
+}
+
+//TODO: unit test
+// deriviative of tanh operation
+__global__ void dtanh_2d_cukernel_pd(double* dst, const double* dm, const double* m, size_t rows, size_t cols, size_t colstride){
+  const size_t rowid = blockDim.y * blockIdx.y + threadIdx.y;
+
+  if (rowid >= rows) return;
+
+  const size_t idmax = rowid * colstride + cols;
+  const size_t inc = blockDim.x * gridDim.x;
+
+  size_t id = rowid * colstride + blockDim.x * blockIdx.x + threadIdx.x;
+
+  while (id < idmax){
+    double a = dm[id];
+    double b = m[id];
+    dst[id] = a * (1. - b * b);
+    id += inc;
+  }
+}
+
+void dtanh_2d_cuda_pd(double* dst, const double* dm const double* m, size_t rows, size_t cols, size_t rowstride, size_t colstride){
+  size_t sz = rowstride * colstride;
+  dim3 tpb(CUDA_MAX_TSZ);
+  dim3 blocks(std::max(sz / CUDA_MAX_TSZ / CUDA_SLICE_SZ, 1UL));
+  dtanh_2d_cukernel_pd<<<blocks, tpb>>>(dst, dm, m, rows, cols, colstride);
 }
 
 // relu block operation

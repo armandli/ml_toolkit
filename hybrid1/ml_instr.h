@@ -17,6 +17,9 @@ struct RegName {
 bool operator == (RegName a, RegName b){
   return strncmp(a.name, b.name, RegName::Len) == 0;
 }
+bool operator != (RegName a, RegName b){
+  return not (a == b);
+}
 bool operator < (RegName a, RegName b){
   char as[RegName::Len], bs[RegName::Len];
   memset(as, 0, RegName::Len);
@@ -72,6 +75,11 @@ enum class InstrType : unsigned {
   //Following Instruction only applies to GPU side
   CopyTo,
   CopyFrom,
+  //Complex Instructions that does not have explicit user specification
+  Sigmoid,
+  DSigmoid,
+  DTanh,
+  Deriviative,
 };
 
 struct Instr {

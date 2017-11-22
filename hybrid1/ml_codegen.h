@@ -153,11 +153,9 @@ std::vector<LiveSet> analyze_liveness(SSA& ssa){
       else
         new_set.liveout = res[i+1].livein;
       new_set.livein = new_set.liveout;
-      const SSAregData& dstDat = ssa.context.lookup(ssa.instructions[i].mDst);
       const SSAregData& s1Dat  = ssa.context.lookup(ssa.instructions[i].mSrc1);
       const SSAregData& s2Dat  = ssa.context.lookup(ssa.instructions[i].mSrc2);
-      if (dstDat.mType == SSAregType::Mtx)
-        new_set.livein.erase(ssa.instructions[i].mDst);
+      new_set.livein.erase(ssa.instructions[i].mDst);
       if (s1Dat.mType == SSAregType::Mtx)
         new_set.livein.insert(ssa.instructions[i].mSrc1);
       if (s2Dat.mType == SSAregType::Mtx)
@@ -171,11 +169,270 @@ std::vector<LiveSet> analyze_liveness(SSA& ssa){
   return res;
 }
 
+//TODO: write an automatic tool for instruction selection based on pattern matching
+
+// At this point we can only have hand coded pattern matcher
 //benefit:
 //  reduce both register pressure as well as computation speed by condensing well known operations 
 //  into bigger CISC instructions that can do a faster job
 void select_instruction(SSA& ssa){
-  //TODO
+  std::vector<Instr> nins, segment;
+  std::vector<bool> done(ssa.instructions.size(), false);
+  std::vector<LiveSet> lv = analyze_liveness(ssa);
+  const size_t maxLookahead = 10;
+
+  class InstructionMatcher {
+    std::vector<Instr>&         segment;
+    std::vector<bool>&          done;
+    const SSA&                  ssa;
+    const std::vector<LiveSet>& lv;
+    size_t                      maxLookahead;
+
+    size_t next_use(size_t idx){
+      for (size_t i = idx + 1; i < std::min(ssa.instructions.size(), idx + maxLookahead); ++i)
+        if (done[i] == false &&
+            (ssa.instructions[i].mSrc1 == ssa.instructions[idx].mDst ||
+             ssa.instructions[i].mSrc2 == ssa.instructions[idx].mDst))
+          return i;
+      return std::numeric_limits<size_t>::max();
+    }
+
+    size_t prev_def(size_t idx, size_t eidx, RegName reg){
+      for (size_t i = idx - 1; i > eidx; --i)
+        if (done[i] == false && ssa.instructions[i].mDst == reg)
+          return i;
+      return std::numeric_limits<size_t>::max();
+    }
+
+    void consumeSigmoid3(size_t idx){
+      if (idx == std::numeric_limits<size_t>::max()) return;
+      const Instr& instr = ssa.instructions[idx];
+      if (instr.mType == InstrType::EDivCM){
+        segment.push_back(instr);
+        done[idx] = true;
+        const SSAregData& s1dat = ssa.context.lookup(instr.mSrc1);
+        if (s1dat.mVal != 1.)
+          return;
+        RegName src1, src2;
+        if (ssa.context.lookup(segment[0].mSrc1).mType == SSAregType::Mtx)
+          src1 = segment[0].mSrc1;
+        else
+          src1 = segment[0].mSrc2;
+        RegName dst = instr.mDst;
+        segment.clear();
+        segment.emplace_back(Instr(InstrType::Sigmoid, dst, src1, src2));
+      }
+    }
+
+    void consumeSigmoid2(size_t idx){
+      if (idx == std::numeric_limits<size_t>::max()) return;
+      const Instr& instr = ssa.instructions[idx];
+      if (instr.mType == InstrType::AddMC){
+        segment.push_back(instr);
+        done[idx] = true;
+        const SSAregData& s1dat = ssa.context.lookup(instr.mSrc1);
+        const SSAregData& s2dat = ssa.context.lookup(instr.mSrc2);
+        if ( not ((s1dat.mType == SSAregType::Scl && s1dat.mVal == 1.) ||
+                  (s2dat.mType == SSAregType::Scl && s2dat.mVal == 1.)))
+          return;
+        consumeSigmoid3(next_use(idx));
+      }
+    }
+
+    void consumeSigmoid1(size_t idx){
+      if (idx == std::numeric_limits<size_t>::max()) return;
+      const Instr& instr = ssa.instructions[idx];
+      if (instr.mType == InstrType::Exp){
+        segment.push_back(instr);
+        done[idx] = true;
+        consumeSigmoid2(next_use(idx));
+      }
+    }
+
+    void consumeDTanh2(size_t idx, RegName tmp){
+      if (idx == std::numeric_limits<size_t>::max()) return;
+      const Instr& instr = ssa.instructions[idx];
+      if (instr.mType == InstrType::EMul){
+        done[idx] = true;
+        RegName src2 = segment[0].mSrc1;
+        RegName src1;
+        if (instr.mSrc1 == tmp) src1 = instr.mSrc2;
+        else                    src1 = instr.mSrc1;
+        RegName dst = instr.mDst;
+        segment.clear();
+        segment.emplace_back(Instr(InstrType::DTanh, dst, src1, src2));
+      }
+    }
+
+    void consumeDTanh1(size_t idx){
+      if (idx == std::numeric_limits<size_t>::max()) return;
+      const Instr& instr = ssa.instructions[idx];
+      if (instr.mType == InstrType::SubCM){
+        segment.push_back(instr);
+        done[idx] = true;
+        const SSAregData& s1dat = ssa.context.lookup(instr.mSrc1);
+        if (s1dat.mVal != 1.)
+          return;
+        consumeDTanh2(next_use(idx), instr.mDst);
+      }
+    }
+
+    bool consumeDSigmoid4(size_t idx){
+      if (idx == std::numeric_limits<size_t>::max()) return false;
+      const Instr& instr = ssa.instructions[idx];
+      if (instr.mType == InstrType::SubCM){
+        const SSAregData& s1dat = ssa.context.lookup(instr.mSrc1);
+        if (s1dat.mVal != 1.)
+          return false;
+        if (instr.mSrc2 != segment[0].mSrc1 && instr.mSrc2 != segment[0].mSrc2)
+          return false;
+        segment.push_back(instr);
+        done[idx] = true;
+        return true;
+      }
+      return false;
+    }
+
+    void consumeDSigmoid1(size_t idx, size_t pidx){
+      if (idx == std::numeric_limits<size_t>::max()) return;
+      const Instr& instr = ssa.instructions[idx];
+      if (instr.mType == InstrType::EMul){
+        Instr& pinstr = segment[0];
+        size_t oidx;
+        if (pinstr.mDst == instr.mSrc1)
+          oidx = prev_def(idx, pidx, instr.mSrc2);
+        else
+          oidx = prev_def(idx, pidx, instr.mSrc1);
+        if (oidx == std::numeric_limits<size_t>::max())
+          return;
+        if (consumeDSigmoid4(oidx)){
+          done[idx] = true;
+          RegName src2 = segment[1].mSrc2;
+          RegName src1;
+          if (pinstr.mSrc1 == src2)
+            src1 = pinstr.mSrc2;
+          else
+            src1 = pinstr.mSrc1;
+          RegName dst = instr.mDst;
+          segment.clear();
+          segment.emplace_back(Instr(InstrType::DSigmoid, dst, src1, src2));
+        }
+      }
+    }
+
+    bool consumeDSigmoid3(size_t idx){
+      if (idx == std::numeric_limits<size_t>::max()) return false;
+      const Instr& instr = ssa.instructions[idx];
+      if (instr.mType == InstrType::EMul){
+        if (instr.mSrc1 != segment[0].mSrc2 && instr.mSrc2 != segment[0].mSrc2)
+          return false;
+        segment.push_back(instr);
+        done[idx] = true;
+        return true;
+      }
+      return false;
+    }
+
+    void consumeDSigmoid2(size_t idx, size_t pidx){
+      if (idx == std::numeric_limits<size_t>::max()) return;
+      const Instr& instr = ssa.instructions[idx];
+      if (instr.mType == InstrType::EMul){
+        Instr& pinstr = segment[0];
+        size_t oidx;
+        if (pinstr.mDst == instr.mSrc1)
+          oidx = prev_def(idx, pidx, instr.mSrc2);
+        else
+          oidx = prev_def(idx, pidx, instr.mSrc1);
+        if (oidx == std::numeric_limits<size_t>::max())
+          return;
+        if (consumeDSigmoid3(oidx)){
+          done[idx] = true;
+          RegName src2 = segment[0].mSrc2;
+          RegName src1;
+          if (segment[1].mSrc1 == src2)
+            src1 = segment[1].mSrc2;
+          else
+            src1 = segment[1].mSrc1;
+          RegName dst = instr.mDst;
+          segment.clear();
+          segment.emplace_back(Instr(InstrType::DSigmoid, dst, src1, src2));
+        }
+      }
+    }
+
+    void consumeDeriviative2(size_t idx){
+      if (idx == std::numeric_limits<size_t>::max()) return;
+      const Instr& instr = ssa.instructions[idx];
+      if (instr.mType == InstrType::Isnan0){
+        done[idx] = true;
+        RegName src1 = segment[0].mSrc1, src2 = segment[0].mSrc2;
+        RegName dst = instr.mDst;
+        segment.clear();
+        segment.emplace_back(Instr(InstrType::Deriviative, dst, src1, src2));
+      }
+      //TODO: alternative way of evaluating isnan
+    }
+
+    void consumeDeriviative1(size_t idx){
+      if (idx == std::numeric_limits<size_t>::max()) return;
+      const Instr& instr = ssa.instructions[idx];
+      if (instr.mType == InstrType::EDivMC){
+        segment.push_back(instr);
+        done[idx] = true;
+        Instr& pinstr = segment[0];
+        const SSAregData& pdat = ssa.context.lookup(pinstr.mSrc1);
+        const SSAregData& s2dat = ssa.context.lookup(instr.mSrc2);
+        if (pdat.mRows != s2dat.mVal)
+          return;
+        consumeDeriviative2(next_use(idx));
+      }
+    }
+
+    void state0(size_t idx){
+      const Instr& instr = ssa.instructions[idx];
+      segment.push_back(instr);
+      //done[idx] = true; optimization
+      switch (instr.mType){
+        case InstrType::EMulMC: {
+          const SSAregData& s1dat = ssa.context.lookup(instr.mSrc1);
+          const SSAregData& s2dat = ssa.context.lookup(instr.mSrc2);
+          if ((s1dat.mType == SSAregType::Scl && s1dat.mVal == 1.) ||
+              (s2dat.mType == SSAregType::Scl && s2dat.mVal == 1.))
+            consumeSigmoid1(next_use(idx));
+        }
+        break;
+        case InstrType::EMul:
+          if (instr.mSrc1 == instr.mSrc2)
+            consumeDTanh1(next_use(idx));
+          else
+            consumeDSigmoid1(next_use(idx), idx);
+        break;
+        case InstrType::SubCM:
+          consumeDSigmoid2(next_use(idx), idx);
+        break;
+        case InstrType::Sub:
+          consumeDeriviative1(next_use(idx));
+        break;
+        default:;
+      }
+    }
+  public:
+    InstructionMatcher(std::vector<Instr>& segment, std::vector<bool>& done, const SSA& ssa, const std::vector<LiveSet>& lv, size_t maxLookahead):
+      segment(segment), done(done), ssa(ssa), lv(lv), maxLookahead(maxLookahead) {}
+    void operator()(size_t idx){
+      segment.clear();
+      state0(idx);
+    }
+  } match_at(segment, done, ssa, lv, maxLookahead);
+  
+  for (size_t i = 0; i < ssa.instructions.size(); ++i){
+    if (done[i]) continue;
+    match_at(i);
+    for (auto& instr : segment)
+      nins.emplace_back(std::move(instr));
+  }
+
+  ssa.instructions = nins;
 }
 
 enum class RegType : unsigned {
