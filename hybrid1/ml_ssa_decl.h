@@ -82,7 +82,7 @@ public:
     return ret;
   }
 
-  RegName gen(){
+  RegName gen() const {
     RegName nil;
     memcpy(nil.name, "s0\0\0", RegName::Len);
     return nil;

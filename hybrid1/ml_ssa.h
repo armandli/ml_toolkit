@@ -88,7 +88,7 @@ template <> RegName to_ssa(SSA& ret, const MtxBase<Scl>& expr){
 template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<TrnOp, X>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Uop<TrnOp, X>&>(expr).param());
   const SSAregData& p1dat = ret.context.lookup(p1);
-  RegName p2;
+  RegName p2 = ret.context.gen();
   RegName dst = ret.context.gen(nullptr, p1dat.mCols, p1dat.mRows);
   ret.instructions.emplace_back(Instr(InstrType::Trn, dst, p1, p2));
   return dst;
@@ -96,7 +96,7 @@ template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<TrnOp, X>>& exp
 template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<NotOp, X>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Uop<NotOp, X>&>(expr).param());
   const SSAregData& p1dat = ret.context.lookup(p1);
-  RegName p2;
+  RegName p2 = ret.context.gen();
   RegName dst = ret.context.gen(nullptr, p1dat.mRows, p1dat.mCols);
   ret.instructions.emplace_back(Instr(InstrType::Not, dst, p1, p2));
   return dst;
@@ -104,7 +104,7 @@ template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<NotOp, X>>& exp
 template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<TanhOp, X>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Uop<TanhOp, X>&>(expr).param());
   const SSAregData& p1dat = ret.context.lookup(p1);
-  RegName p2;
+  RegName p2 = ret.context.gen();
   RegName dst = ret.context.gen(nullptr, p1dat.mRows, p1dat.mCols);
   ret.instructions.emplace_back(Instr(InstrType::Tanh, dst, p1, p2));
   return dst;
@@ -112,7 +112,7 @@ template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<TanhOp, X>>& ex
 template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<SoftmaxOp, X>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Uop<SoftmaxOp, X>&>(expr).param());
   const SSAregData& p1dat = ret.context.lookup(p1);
-  RegName p2;
+  RegName p2 = ret.context.gen();
   RegName dst = ret.context.gen(nullptr, p1dat.mRows, p1dat.mCols);
   ret.instructions.emplace_back(Instr(InstrType::Softmax, dst, p1, p2));
   return dst;
@@ -120,7 +120,7 @@ template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<SoftmaxOp, X>>&
 template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<ExpOp, X>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Uop<ExpOp, X>&>(expr).param());
   const SSAregData& p1dat = ret.context.lookup(p1);
-  RegName p2;
+  RegName p2 = ret.context.gen();
   RegName dst = ret.context.gen(nullptr, p1dat.mRows, p1dat.mCols);
   ret.instructions.emplace_back(Instr(InstrType::Exp, dst, p1, p2));
   return dst;
@@ -128,7 +128,7 @@ template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<ExpOp, X>>& exp
 template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<IsnanOp, X>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Uop<IsnanOp, X>&>(expr).param());
   const SSAregData& p1dat = ret.context.lookup(p1);
-  RegName p2;
+  RegName p2 = ret.context.gen();
   RegName dst = ret.context.gen(nullptr, p1dat.mRows, p1dat.mCols);
   ret.instructions.emplace_back(Instr(InstrType::Isnan, dst, p1, p2));
   return dst;
@@ -136,7 +136,7 @@ template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<IsnanOp, X>>& e
 template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<Isnan0Op, X>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Uop<Isnan0Op, X>&>(expr).param());
   const SSAregData& p1dat = ret.context.lookup(p1);
-  RegName p2;
+  RegName p2 = ret.context.gen();
   RegName dst = ret.context.gen(nullptr, p1dat.mRows, p1dat.mCols);
   ret.instructions.emplace_back(Instr(InstrType::Isnan0, dst, p1, p2));
   return dst;
@@ -147,7 +147,7 @@ template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<Add
   const SSAregData& p1dat = ret.context.lookup(p1);
   const SSAregData& p2dat = ret.context.lookup(p2);
 
-  assert((p1dat.mRows == p2dat.mRows && p1dat.mCols == p2dat.mCols) || ((p1dat.mRows == 1 && p1dat.mCols == 1) || (p2dat.mRows == 1 && p2dat.mCols == 1)));
+  assert((p1dat.mRows == p2dat.mRows && p1dat.mCols == p2dat.mCols) || p1dat.mType == SSAregType::Scl || p2dat.mType == SSAregType::Scl);
 
   RegName dst = ret.context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
 
@@ -163,7 +163,7 @@ template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<Sub
   const SSAregData& p1dat = ret.context.lookup(p1);
   const SSAregData& p2dat = ret.context.lookup(p2);
 
-  assert((p1dat.mRows == p2dat.mRows && p1dat.mCols == p2dat.mCols) || ((p1dat.mRows == 1 && p1dat.mCols == 1) || (p2dat.mRows == 1 && p2dat.mCols == 1)));
+  assert((p1dat.mRows == p2dat.mRows && p1dat.mCols == p2dat.mCols) || p1dat.mType == SSAregType::Scl || p2dat.mType == SSAregType::Scl);
 
   RegName dst = ret.context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
 
@@ -181,7 +181,7 @@ template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<Mul
   const SSAregData& p1dat = ret.context.lookup(p1);
   const SSAregData& p2dat = ret.context.lookup(p2);
 
-  assert((p1dat.mRows == p2dat.mRows && p1dat.mCols == p2dat.mCols) || ((p1dat.mRows == 1 && p1dat.mCols == 1) || (p2dat.mRows == 1 && p2dat.mCols == 1)));
+  assert((p1dat.mRows == p2dat.mRows && p1dat.mCols == p2dat.mCols) || p1dat.mType == SSAregType::Scl || p2dat.mType == SSAregType::Scl);
 
   RegName dst = ret.context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
 
@@ -197,7 +197,7 @@ template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<Div
   const SSAregData& p1dat = ret.context.lookup(p1);
   const SSAregData& p2dat = ret.context.lookup(p2);
 
-  assert((p1dat.mRows == p2dat.mRows && p1dat.mCols == p2dat.mCols) || ((p1dat.mRows == 1 && p1dat.mCols == 1) || (p2dat.mRows == 1 && p2dat.mCols == 1)));
+  assert((p1dat.mRows == p2dat.mRows && p1dat.mCols == p2dat.mCols) || p1dat.mType == SSAregType::Scl || p2dat.mType == SSAregType::Scl);
 
   RegName dst = ret.context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
 
@@ -227,7 +227,7 @@ template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<GtO
   const SSAregData& p1dat = ret.context.lookup(p1);
   const SSAregData& p2dat = ret.context.lookup(p2);
 
-  assert((p1dat.mRows == p2dat.mRows && p1dat.mCols == p2dat.mCols) || (p1dat.mRows == 1 && p1dat.mCols == 1) || (p2dat.mRows == 1 && p2dat.mCols == 1));
+  assert((p1dat.mRows == p2dat.mRows && p1dat.mCols == p2dat.mCols) || p1dat.mType == SSAregType::Scl || p2dat.mType == SSAregType::Scl);
 
   RegName dst = ret.context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
 
@@ -245,7 +245,7 @@ template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<Gt0
   const SSAregData& p1dat = ret.context.lookup(p1);
   const SSAregData& p2dat = ret.context.lookup(p2);
 
-  assert((p1dat.mRows > 1 && p1dat.mCols > 1) || (p2dat.mRows > 1 && p2dat.mCols > 1));
+  assert(p1dat.mType == SSAregType::Scl || p2dat.mType == SSAregType::Scl);
 
   RegName dst = ret.context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
 
@@ -307,6 +307,15 @@ std::ostream& operator << (std::ostream& out, const SSA& ssa){
       break;
       case InstrType::DRelu:
         out << instr.mDst << " <- " << instr.mSrc1 << " drelu " << instr.mSrc2 << "\n";
+      break;
+      case InstrType::DSigmoid:
+        out << instr.mDst << " <- dsigmoid(" << instr.mSrc1 << "," << instr.mSrc2 << ")\n";
+      break;
+      case InstrType::DTanh:
+        out << instr.mDst << " <- dtanh(" << instr.mSrc1 << "," << instr.mSrc2 << ")\n";
+      break;
+      case InstrType::Deriviative:
+        out << instr.mDst << " <- deriviative(" << instr.mSrc1 << "," << instr.mSrc2 << ")\n";
       break;
       case InstrType::AddMC: {
         const SSAregData& arg1 = ssa.context.lookup(instr.mSrc1);
@@ -388,6 +397,9 @@ std::ostream& operator << (std::ostream& out, const SSA& ssa){
       break;
       case InstrType::Isnan0:
         out << instr.mDst << " <- isnan0(" << instr.mSrc1 << ")\n";
+      break;
+      case InstrType::Sigmoid:
+        out << instr.mDst << " <- sigmoid(" << instr.mSrc1 << ")\n";
       break;
       //TODO: expand operation here
       default: assert(false);

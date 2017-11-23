@@ -121,7 +121,9 @@ std::vector<Instr> cuda_register_allocation(SSA& ssa, CUDAInstrContext& ctx, con
         case SSAregType::Scl:
           ret = ctx.addConst(sdat.mVal);
         break;
-        case SSAregType::Nil: /*DO NOTHING*/ break;
+        case SSAregType::Nil:
+          ret = ctx.addNil();
+        break;
         default: assert(false);
       }
       return ret;

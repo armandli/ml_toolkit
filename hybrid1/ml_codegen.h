@@ -213,11 +213,12 @@ void select_instruction(SSA& ssa){
         const SSAregData& s1dat = ssa.context.lookup(instr.mSrc1);
         if (s1dat.mVal != 1.)
           return;
-        RegName src1, src2;
+        RegName src1;
         if (ssa.context.lookup(segment[0].mSrc1).mType == SSAregType::Mtx)
           src1 = segment[0].mSrc1;
         else
           src1 = segment[0].mSrc2;
+        RegName src2 = ssa.context.gen();
         RegName dst = instr.mDst;
         segment.clear();
         segment.emplace_back(Instr(InstrType::Sigmoid, dst, src1, src2));
@@ -396,8 +397,8 @@ void select_instruction(SSA& ssa){
         case InstrType::EMulMC: {
           const SSAregData& s1dat = ssa.context.lookup(instr.mSrc1);
           const SSAregData& s2dat = ssa.context.lookup(instr.mSrc2);
-          if ((s1dat.mType == SSAregType::Scl && s1dat.mVal == 1.) ||
-              (s2dat.mType == SSAregType::Scl && s2dat.mVal == 1.))
+          if ((s1dat.mType == SSAregType::Scl && s1dat.mVal == -1.) ||
+              (s2dat.mType == SSAregType::Scl && s2dat.mVal == -1.))
             consumeSigmoid1(next_use(idx));
         }
         break;
@@ -538,6 +539,12 @@ public:
       return name;
     } else
       return (*it).second;
+  }
+
+  RegName addNil(){
+    RegName ret;
+    ret.name[0] = 'n';
+    return ret;
   }
 
   std::unordered_map<const Mtx*, RegName>&  memMap(){

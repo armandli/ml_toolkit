@@ -82,7 +82,9 @@ std::vector<Instr> local_register_allocation(SSA& ssa, MemInstrContext& ctx, con
         case SSAregType::Scl:
           ret = ctx.addConst(sdat.mVal);
         break;
-        case SSAregType::Nil: /*DO NOTHING*/ break;
+        case SSAregType::Nil:
+          ret = ctx.addNil();
+        break;
         default: assert(false);
       }
       return ret;
@@ -272,7 +274,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         } else {
           val = ctx.lookup_val(si.mSrc2);
           arg = find_mem(si.mSrc1);
-          sz  = find_size(si.mSrc2);
+          sz  = find_size(si.mSrc1);
         }
         double* d = find_mem(si.mDst);
         assert(arg != nullptr && d != nullptr);

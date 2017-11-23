@@ -101,43 +101,54 @@ std::ostream& operator << (std::ostream& out, const Instr& instr){
     case InstrType::Exp:    out << "exp("; break;
     case InstrType::Isnan:  out << "isnan("; break;
     case InstrType::Isnan0: out << "isnan0("; break;
+    case InstrType::Sigmoid:out << "sigmoid("; break;
     default:;
   }
   out << instr.mSrc1;
   switch (instr.mType){
     case InstrType::Add: case InstrType::AddMC:
-      out << " + " << instr.mSrc2 << "\n";
+      out << " + " << instr.mSrc2;
     break;
     case InstrType::Sub: case InstrType::SubMC: case InstrType::SubCM:
-      out << " - " << instr.mSrc2 << "\n";
+      out << " - " << instr.mSrc2;
     break;
     case InstrType::EMul: case InstrType::EMulMC:
-      out << " * " << instr.mSrc2 << "\n";
+      out << " * " << instr.mSrc2;
     break;
     case InstrType::EDiv: case InstrType::EDivMC: case InstrType::EDivCM:
-      out << " / " << instr.mSrc2 << "\n";
+      out << " / " << instr.mSrc2;
     break;
     case InstrType::GT: case InstrType::GTMC: case InstrType::GTCM:
-      out << " > " << instr.mSrc2 << "\n";
+      out << " > " << instr.mSrc2;
     break;
     case InstrType::GT0MC: case InstrType::GT0CM:
-      out << " >0 " << instr.mSrc2 << "\n";
+      out << " >0 " << instr.mSrc2;
     break;
     case InstrType::Mask:
-      out << " mask " << instr.mSrc2 << "\n";
+      out << " mask " << instr.mSrc2;
     break;
     case InstrType::Dot:
-      out << " ^ " << instr.mSrc2 << "\n";
+      out << " ^ " << instr.mSrc2;
+    break;
+    case InstrType::DSigmoid:
+      out << " dsigmoid " << instr.mSrc2;
+    break;
+    case InstrType::DTanh:
+      out << " dtanh " << instr.mSrc2;
+    break;
+    case InstrType::Deriviative:
+      out << " deriviative " << instr.mSrc2;
     break;
     case InstrType::Trn: case InstrType::Not:
-      out << "\n";
+      /* DO NOTHING */
     break;
-    case InstrType::Exp: case InstrType::Isnan: case InstrType::Isnan0:
-      out << ")\n";
+    case InstrType::Exp: case InstrType::Isnan: case InstrType::Isnan0: case InstrType::Sigmoid:
+      out << ")";
     break;
     //TODO: expand operation here
     default:;
   }
+  out << "\n";
   return out;
 }
 
