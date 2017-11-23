@@ -144,7 +144,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
       RegSize ret = {0, 0};
       switch (ctx.type(name)){
       case RegType::Mem: {
-        const Mtx* m = ctx.lookup_mem(name);
+        const Memory* m = ctx.lookup_mem(name);
         ret.rs = (*m).rows();
         ret.cs = (*m).cols();
       }
@@ -218,6 +218,23 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
                     s1, s1size.cs,
                     s2, s2size.cs,
                     0., d, s2size.cs);
+      }
+      break;
+      case InstrType::CELoss:
+      case InstrType::CEAccuracy: {
+        double* s1 = find_mem(si.mSrc1);
+        double* s2 = find_mem(si.mSrc2);
+        double* d  = find_mem(si.mDst);
+        assert(s1 != nullptr && s2 != nullptr && d != nullptr);
+        RegSize s1size = find_size(si.mSrc1);
+        assert(s1size.rs > 0 && s1size.cs > 0);
+        if (ctx.type(si.mDst) == RegType::Reg)
+          ctx.setRegSize(si.mDst, 1, 1);
+        switch (si.mType){
+          case InstrType::CELoss:     MTXOP::ce_loss_2d_mtxop_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
+          case InstrType::CEAccuracy: MTXOP::ce_accuracy_2d_mtxop_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
+          default: assert(false);
+        }
       }
       break;
       case InstrType::SubMC:

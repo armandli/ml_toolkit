@@ -71,6 +71,8 @@ enum class InstrType : unsigned {
   GT0MC,
   GT0CM,
   DRelu,
+  CELoss,
+  CEAccuracy,
   //TODO: expand operation here
   //Following Instruction only applies to GPU side
   CopyTo,
@@ -129,6 +131,12 @@ std::ostream& operator << (std::ostream& out, const Instr& instr){
     break;
     case InstrType::Dot:
       out << " ^ " << instr.mSrc2;
+    break;
+    case InstrType::CELoss:
+      out << " loss " << instr.mSrc2;
+    break;
+    case InstrType::CEAccuracy:
+      out << " accuracy " << instr.mSrc2;
     break;
     case InstrType::DSigmoid:
       out << " dsigmoid " << instr.mSrc2;

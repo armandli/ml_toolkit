@@ -15,69 +15,93 @@ namespace ML {
 
 class MemInstrContext;
 
-class Mtx {
+class Memory {
   double* mData;
   size_t  mRows;
   size_t  mCols;
+  mutable SSA mSSA;
+
+  friend class ComputeMtxCommunicator;
+protected:
+  double* data() const { return mData; }
+  void set_data(double* data){ mData = data; }
+  void delete_data(){
+    if (mData) delete[] mData;
+    mData = nullptr;
+  }
+
+  bool is_ssa() const { return not mSSA.empty(); }
+  bool is_ssa_empty() const { return mSSA.empty(); }
+  SSA& ssa() const { return mSSA; }
+  void clear_ssa() const { mSSA.clear(); }
+
+public:
+  explicit Memory(double* data): mData(data), mRows(0), mCols(0) {}
+  Memory(double* data, size_t rows, size_t cols): mData(data), mRows(rows), mCols(cols) {}
+  ~Memory() = default;
+
+  size_t rows() const {
+    return mRows;
+  }
+
+  void set_rows(size_t r){
+    mRows = r;
+  }
+
+  size_t cols() const {
+    return mCols;
+  }
+
+  void set_cols(size_t c){
+    mCols = c;
+  }
+};
+
+class Mtx: public Memory {
   size_t  mRowStride;
   size_t  mColStride;
-  mutable SSA   mSSA;
 
   /* load matrix from fstream */
   void load(std::istream& in){
     assert(in.good());
 
-    in.read((char*)&mRows, sizeof(size_t));
-    in.read((char*)&mCols, sizeof(size_t));
+    size_t a, b;
+    in.read((char*)&a, sizeof(size_t));
+    in.read((char*)&b, sizeof(size_t));
+    set_rows(a);
+    set_cols(b);
 
-    assert(mRows > 0 && mCols > 0);
+    assert(rows() > 0 && cols() > 0);
 
-    mRowStride = roundup_row(mRows);
-    mColStride = roundup_col(mCols);
+    mRowStride = roundup_row(rows());
+    mColStride = roundup_col(cols());
 
-    mData = new double[mRowStride * mColStride];
+    set_data(new double[mRowStride * mColStride]);
 
-    in.read((char*)mData, sizeof(double) * mRowStride * mColStride);
-  }
-
-  bool is_ssa() const {
-    return mSSA.instructions.size() != 0;
-  }
-
-  double* data() const {
-    return mData;
-  }
-
-  SSA& ssa() const {
-    return mSSA;
-  }
-
-  void clear_ssa() const {
-    mSSA.clear();
+    in.read((char*)data(), sizeof(double) * mRowStride * mColStride);
   }
 
   friend class SSAMtxCommunicator;
-  friend class ComputeMtxCommunicator;
 public:
-  Mtx(): mData(nullptr), mRows(0), mCols(0), mRowStride(0), mColStride(0) {}
+  Mtx(): Memory(nullptr), mRowStride(0), mColStride(0) {}
   Mtx(size_t r, size_t c, double v = 0.):
-    mData(nullptr), mRows(r), mCols(c), mRowStride(roundup_row(r)), mColStride(roundup_col(c)) {
-    mData = new double[mRowStride * mColStride];
-    SSE::const_init_2d_sse_pd(mData, v, mRows, mCols, mRowStride, mColStride);
+    Memory(nullptr, r, c), mRowStride(roundup_row(r)), mColStride(roundup_col(c)) {
+    set_data(new double[mRowStride * mColStride]);
+    SSE::const_init_2d_sse_pd(data(), v, rows(), cols(), mRowStride, mColStride);
   }
   Mtx(size_t r, size_t c, RandomizationType rtype, double p1, double p2):
-    mData(nullptr), mRows(r), mCols(c), mRowStride(roundup_row(r)), mColStride(roundup_col(c)) {
-    mData = new double[mRowStride * mColStride];
+    Memory(nullptr, r, c), mRowStride(roundup_row(r)), mColStride(roundup_col(c)) {
+    set_data(new double[mRowStride * mColStride]);
     switch (rtype){
-      case RandomizationType::Uniform:  MTXOP::rnd_uniform_init_2d_mtxop_pd(mData, p1, p2, mRows, mCols, mRowStride, mColStride); break;
-      case RandomizationType::Gaussian: MTXOP::rnd_normal_init_2d_mtxop_pd(mData, p1, p2, mRows, mCols, mRowStride, mColStride); break;
+      case RandomizationType::Uniform:  MTXOP::rnd_uniform_init_2d_mtxop_pd(data(), p1, p2, rows(), cols(), mRowStride, mColStride); break;
+      case RandomizationType::Gaussian: MTXOP::rnd_normal_init_2d_mtxop_pd(data(), p1, p2, rows(), cols(), mRowStride, mColStride); break;
       default: assert(false);
     }
   }
-  Mtx(std::istream& in){
+  Mtx(std::istream& in): Memory(nullptr) {
     load(in);
   }
-  Mtx(const char* filename){
+  Mtx(const char* filename): Memory(nullptr) {
     std::ifstream in(filename, std::ifstream::in);
     assert(in.good());
     load(in);
@@ -85,53 +109,75 @@ public:
   }
   template <typename CRTP>
   Mtx(MtxBase<CRTP>&& expr):
-    mData(nullptr), mRows(0), mCols(0), mRowStride(0), mColStride(0) {
+    Memory(nullptr), mRowStride(0), mColStride(0) {
     //to_ssa is friend, and modifies this matrix's data
-    mSSA = to_ssa(expr, *this);
+    ssa() = to_ssa(expr, *this);
   }
 
-  ~Mtx(){
-    if (mData){
-      delete[] mData;
-      mData = nullptr;
-    }
-  }
+  ~Mtx(){ delete_data(); }
 
   template <typename CRTP>
   Mtx& operator=(MtxBase<CRTP>&& expr){
-    assert(mSSA.empty());
-    mSSA = to_ssa(expr, *this);
+    ssa() = to_ssa(expr, *this);
     return *this;
   }
 
   void evaluate(MemArena& arena){
-    if (mSSA.empty()) return;
-
-    memvaluateSSA(mSSA, arena);
+    if (is_ssa_empty()) return;
+    memvaluateSSA(ssa(), arena);
   }
   void evaluate(CUDA::CUDArena&){
     //TODO
   }
 
   /* accessors */
-  size_t rows() const { return mRows; }
-  size_t cols() const { return mCols; }
+//  size_t rows() const { return mRows; }
+//  size_t cols() const { return mCols; }
   size_t rowstride() const { return mRowStride; }
   size_t colstride() const { return mColStride; }
   double operator()(size_t i, size_t j) const {
     assert(i < rows() && j < cols());
-    assert(mSSA.empty());
+    assert(is_ssa_empty());
 
-    return D2Idx(mData, i, j, mRowStride, mColStride);
+    return D2Idx(data(), i, j, mRowStride, mColStride);
   }
   double& operator()(size_t i, size_t j){
     assert(i < rows() && j < cols());
-    assert(mSSA.empty());
+    assert(is_ssa_empty());
 
-    return D2Idx(mData, i, j, mRowStride, mColStride);
+    return D2Idx(data(), i, j, mRowStride, mColStride);
+  }
+};
+
+class ReductionResult: public Memory {
+  double mVal;
+public:
+  template <typename CRTP>
+  ReductionResult(MtxBase<CRTP>&& expr): Memory(&mVal, 1, 1), mVal(0) {
+    ssa() = to_ssa(expr, *this);
+  }
+  ~ReductionResult() = default;
+
+  template <typename CRTP>
+  ReductionResult& operator=(MtxBase<CRTP>&& expr){
+    assert(is_ssa_empty());
+    ssa() = to_ssa(expr, *this);
+    return *this;
   }
 
-  //TODO
+  void evaluate(MemArena& arena){
+    if (is_ssa_empty()) return;
+    memvaluateSSA(ssa(), arena);
+  }
+
+  void evaluate(CUDA::CUDArena&){
+    //TODO
+  }
+
+  operator double() const {
+    assert(is_ssa_empty());
+    return mVal;
+  }
 };
 
 } // ML

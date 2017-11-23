@@ -523,7 +523,7 @@ Bop<MaskOp, X, Y> mask(MtxBase<X>&& a, MtxBase<Y>&& b){
 }
 /* END Mask */
 
-/* BEGIN drelu */
+/* BEGIN Derivaitive of RELU */
 struct DReluOp {
   static void debug(std::stringstream& ss){
     ss << "drelu";
@@ -560,7 +560,85 @@ template <typename X, typename Y>
 Bop<DReluOp, X, Y> drelu(MtxBase<X>&& a, MtxBase<Y>&& b){
   return Bop<DReluOp, X, Y>(static_cast<X&&>(a), static_cast<Y&&>(b));
 }
-/* END drelu */
+/* END Deriviative of RELU */
+
+/* BEGIN Cross Entropy Loss */
+struct CrossEntropyLossOp {
+  static void debug(std::stringstream& ss){
+    ss << "ce_loss";
+  }
+};
+
+Bop<CrossEntropyLossOp, MtxRef, Scl> ce_loss(MtxRef&&, Scl&&){
+  assert(!!!"cross entropy loss can only be applied to 2 matrcies");
+}
+Bop<CrossEntropyLossOp, Scl, MtxRef> ce_loss(Scl&&, MtxRef&&){
+  assert(!!!"cross entropy loss can only be applied to 2 matrcies");
+}
+template <typename X>
+Bop<CrossEntropyLossOp, X, Scl> ce_loss(MtxBase<X>&&, Scl&&){
+  assert(!!!"cross entropy loss can only be applied to 2 matrcies");
+}
+template <typename X>
+Bop<CrossEntropyLossOp, Scl, X> ce_loss(Scl&&, MtxBase<X>&&){
+  assert(!!!"cross entropy loss can only be applied to 2 matrcies");
+}
+
+Bop<CrossEntropyLossOp, MtxRef, MtxRef> ce_loss(MtxRef&& a, MtxRef&& b){
+  return Bop<CrossEntropyLossOp, MtxRef, MtxRef>(std::move(a), std::move(b));
+}
+template <typename X>
+Bop<CrossEntropyLossOp, X, MtxRef> ce_loss(MtxBase<X>&& a, MtxRef&& b){
+  return Bop<CrossEntropyLossOp, X, MtxRef>(static_cast<X&&>(a), std::move(b));
+}
+template <typename X>
+Bop<CrossEntropyLossOp, MtxRef, X> ce_loss(MtxRef&& a, MtxBase<X>&& b){
+  return Bop<CrossEntropyLossOp, MtxRef, X>(std::move(a), static_cast<X&&>(b));
+}
+template <typename X, typename Y>
+Bop<CrossEntropyLossOp, X, Y> ce_loss(MtxBase<X>&& a, MtxBase<Y>&& b){
+  return Bop<CrossEntropyLossOp, X, Y>(static_cast<X&&>(a), static_cast<Y&&>(b));
+}
+/* END Cross Entropy Loss */
+
+/* BEGIN Cross Entropy Accuracy */
+struct CrossEntropyAccuracyOp {
+  static void debug(std::stringstream& ss){
+    ss << "ce_accuracy";
+  }
+};
+
+Bop<CrossEntropyAccuracyOp, MtxRef, Scl> ce_accuracy(MtxRef&&, Scl&&){
+  assert(!!!"cross entropy accuracy can only be applied to 2 matrices");
+}
+Bop<CrossEntropyAccuracyOp, Scl, MtxRef> ce_accuracy(Scl&&, MtxRef&&){
+  assert(!!!"cross entropy accuracy can only be applied to 2 matrices");
+}
+template <typename X>
+Bop<CrossEntropyAccuracyOp, X, Scl> ce_accuracy(MtxBase<X>&&, Scl&&){
+  assert(!!!"cross entropy accuracy can only be applied to 2 matrices");
+}
+template <typename X>
+Bop<CrossEntropyAccuracyOp, Scl, X> ce_accuracy(Scl&&, MtxBase<X>&&){
+  assert(!!!"cross entropy accuracy can only be applied to 2 matrices");
+}
+
+Bop<CrossEntropyAccuracyOp, MtxRef, MtxRef> ce_accuracy(MtxRef&& a, MtxRef&& b){
+  return Bop<CrossEntropyAccuracyOp, MtxRef, MtxRef>(std::move(a), std::move(b));
+}
+template <typename X>
+Bop<CrossEntropyAccuracyOp, X, MtxRef> ce_accuracy(MtxBase<X>&& a, MtxRef&& b){
+  return Bop<CrossEntropyAccuracyOp, X, MtxRef>(static_cast<X&&>(a), std::move(b));
+}
+template <typename X>
+Bop<CrossEntropyAccuracyOp, MtxRef, X> ce_accuracy(MtxRef&& a, MtxBase<X>&& b){
+  return Bop<CrossEntropyAccuracyOp, MtxRef, X>(std::move(a), static_cast<X&&>(b));
+}
+template <typename X, typename Y>
+Bop<CrossEntropyAccuracyOp, X, Y> ce_accuracy(MtxBase<X>&& a, MtxBase<Y>&& b){
+  return Bop<CrossEntropyAccuracyOp, X, Y>(static_cast<X&&>(a), static_cast<Y&&>(b));
+}
+/* END Cross Entropy Accuracy */
 
 //TODO: expand operation here
 

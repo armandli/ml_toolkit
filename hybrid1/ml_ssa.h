@@ -25,13 +25,13 @@ struct SSAMtxCommunicator {
   static void reset_mtx_size(Mtx& dst, const SSAregData& data){
     size_t rowstride = roundup_row(data.mRows);
     size_t colstride = roundup_col(data.mCols);
-    if (dst.mData != nullptr)
-      delete[] dst.mData;
+    if (dst.data() != nullptr)
+      dst.delete_data();
     dst.mRowStride = rowstride;
     dst.mColStride = colstride;
-    dst.mData = new double[rowstride * colstride];
-    dst.mRows = data.mRows;
-    dst.mCols = data.mCols;
+    dst.set_data(new double[rowstride * colstride]);
+    dst.set_rows(data.mRows);
+    dst.set_cols(data.mCols);
   }
   static RegName merge_instructions(SSA& dst, const Mtx& src){
     //if there is no SSABlock in src, we're done
@@ -68,7 +68,7 @@ struct SSAMtxCommunicator {
       dst.instructions.emplace_back(Instr(instr.mType, new_d, new_s1, new_s2));
     }
 
-    std::unordered_map<const Mtx*, RegName>::iterator it = dst.context.get_mtxmap().find(&src);
+    std::unordered_map<const Memory*, RegName>::iterator it = dst.context.get_mtxmap().find(&src);
     assert(it != dst.context.get_mtxmap().end());
     return (*it).second;
   }
@@ -279,6 +279,30 @@ template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<DRe
   ret.instructions.emplace_back(Instr(InstrType::DRelu, dst, p1, p2));
   return dst;
 }
+template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<CrossEntropyLossOp, X, Y>>& expr){
+  RegName p1 = to_ssa(ret, static_cast<const Bop<CrossEntropyLossOp, X, Y>&>(expr).param1());
+  RegName p2 = to_ssa(ret, static_cast<const Bop<CrossEntropyLossOp, X, Y>&>(expr).param2());
+  const SSAregData& p1dat = ret.context.lookup(p1);
+  const SSAregData& p2dat = ret.context.lookup(p2);
+
+  assert(p1dat.mRows == p2dat.mRows && p1dat.mCols == p2dat.mCols);
+
+  RegName dst = ret.context.gen(nullptr, 1, 1);
+  ret.instructions.emplace_back(Instr(InstrType::CELoss, dst, p1, p2));
+  return dst;
+}
+template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<CrossEntropyAccuracyOp, X, Y>>& expr){
+  RegName p1 = to_ssa(ret, static_cast<const Bop<CrossEntropyAccuracyOp, X, Y>&>(expr).param1());
+  RegName p2 = to_ssa(ret, static_cast<const Bop<CrossEntropyAccuracyOp, X, Y>&>(expr).param2());
+  const SSAregData& p1dat = ret.context.lookup(p1);
+  const SSAregData& p2dat = ret.context.lookup(p2);
+
+  assert(p1dat.mRows == p2dat.mRows && p1dat.mCols == p2dat.mCols);
+
+  RegName dst = ret.context.gen(nullptr, 1, 1);
+  ret.instructions.emplace_back(Instr(InstrType::CEAccuracy, dst, p1, p2));
+  return dst;
+}
 //TODO: expand operation here
 
 std::ostream& operator << (std::ostream& out, const SSA& ssa){
@@ -307,6 +331,12 @@ std::ostream& operator << (std::ostream& out, const SSA& ssa){
       break;
       case InstrType::DRelu:
         out << instr.mDst << " <- " << instr.mSrc1 << " drelu " << instr.mSrc2 << "\n";
+      break;
+      case InstrType::CELoss:
+        out << instr.mDst << " <- " << instr.mSrc1 << " loss " << instr.mSrc2 << "\n";
+      break;
+      case InstrType::CEAccuracy:
+        out << instr.mDst << " <- " << instr.mSrc1 << " accuracy " << instr.mSrc2 << "\n";
       break;
       case InstrType::DSigmoid:
         out << instr.mDst << " <- dsigmoid(" << instr.mSrc1 << "," << instr.mSrc2 << ")\n";
@@ -414,6 +444,15 @@ SSA to_ssa(const MtxBase<CRTP>& expr, Mtx& dst){
   RegName dname = to_ssa(ret, expr);
   const SSAregData& ddat = ret.context.lookup(dname);
   SSAMtxCommunicator::reset_mtx_size(dst, ddat);
+  ret.context.associate(dname, dst);
+  return ret;
+}
+
+template <typename CRTP>
+SSA to_ssa(const MtxBase<CRTP>& expr, ReductionResult& dst){
+  SSA ret;
+  RegName dname = to_ssa(ret, expr);
+  const SSAregData& ddat = ret.context.lookup(dname);
   ret.context.associate(dname, dst);
   return ret;
 }

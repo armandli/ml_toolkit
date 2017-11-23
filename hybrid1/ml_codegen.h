@@ -47,6 +47,8 @@ struct LocalValueNumberHash {
       case InstrType::GT0MC:      pr[0] = 20; break;
       case InstrType::GT0CM:      pr[0] = 21; break;
       case InstrType::DRelu:      pr[0] = 22; break;
+      case InstrType::CELoss:     pr[0] = 23; break;
+      case InstrType::CEAccuracy: pr[0] = 24; break;
       //TODO: expand operation here
       default: assert(false);
     }
@@ -86,7 +88,7 @@ void local_value_numbering(SSA& ssa){
       break;
       // cases where order does matter
       case InstrType::Sub: case InstrType::EDiv: case InstrType::Dot: case InstrType::GT: case InstrType::Mask:
-      case InstrType::DRelu:
+      case InstrType::DRelu: case InstrType::CELoss: case InstrType::CEAccuracy:
       case InstrType::SubMC: case InstrType::SubCM: case InstrType::EDivMC: case InstrType::EDivCM:
       case InstrType::GTMC: case InstrType::GTCM: case InstrType::GT0MC: case InstrType::GT0CM:
       case InstrType::Trn: case InstrType::Not: case InstrType::Tanh: case InstrType::Softmax:
@@ -462,15 +464,15 @@ struct RegData {
 
 class InstrContext {
 protected:
-  std::unordered_map<RegName, const Mtx*, RegNameHash> mMemMap;
-  std::unordered_map<const Mtx*, RegName>              mMtxMap;
-  std::unordered_map<RegName, RegData, RegNameHash>    mRegMap;
-  std::unordered_map<RegName, double, RegNameHash>     mConstMap;
-  std::unordered_map<double, RegName>                  mValMap;
+  std::unordered_map<RegName, const Memory*, RegNameHash> mMemMap;
+  std::unordered_map<const Memory*, RegName>              mMtxMap;
+  std::unordered_map<RegName, RegData, RegNameHash>       mRegMap;
+  std::unordered_map<RegName, double, RegNameHash>        mConstMap;
+  std::unordered_map<double, RegName>                     mValMap;
 private:
-  int                                                  mMemCount;
-  int                                                  mRegCount;
-  int                                                  mConstCount;
+  int                                                     mMemCount;
+  int                                                     mRegCount;
+  int                                                     mConstCount;
 
   RegName nextMemName(){
     RegName ret;
@@ -519,7 +521,7 @@ public:
     return name;
   }
 
-  RegName addMem(const Mtx& mtx){
+  RegName addMem(const Memory& mtx){
     decltype(mMtxMap)::iterator it = mMtxMap.find(&mtx);
     if (it == mMtxMap.end()){
       RegName name = nextMemName();
@@ -547,11 +549,11 @@ public:
     return ret;
   }
 
-  std::unordered_map<const Mtx*, RegName>&  memMap(){
+  std::unordered_map<const Memory*, RegName>&  memMap(){
     return mMtxMap;
   }
 
-  const Mtx* lookup_mem(RegName name){
+  const Memory* lookup_mem(RegName name){
     assert(name.name[0] == MEM);
     return mMemMap[name];
   }
@@ -568,18 +570,18 @@ public:
 };
 
 struct ComputeMtxCommunicator {
-  static void clear_ssa(const Mtx& mtx){
+  static void clear_ssa(const Memory& mtx){
     mtx.clear_ssa();
   }
-  static double* get_data(const Mtx& mtx){
+  static double* get_data(const Memory& mtx){
     return mtx.data();
   }
 };
 
 void release_ssa(InstrContext& ctx){
-  std::unordered_map<const Mtx*, RegName>& mtxes = ctx.memMap();
-  for (std::unordered_map<const Mtx*, RegName>::iterator it = mtxes.begin(); it != mtxes.end(); ++it){
-    const Mtx* pm = (*it).first;
+  std::unordered_map<const Memory*, RegName>& mtxes = ctx.memMap();
+  for (std::unordered_map<const Memory*, RegName>::iterator it = mtxes.begin(); it != mtxes.end(); ++it){
+    const Memory* pm = (*it).first;
     ComputeMtxCommunicator::clear_ssa(*pm);
   }
 }

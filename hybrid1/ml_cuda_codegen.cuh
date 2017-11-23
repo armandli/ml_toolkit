@@ -32,11 +32,12 @@ public:
       RegName name = addReg(RegData(arena.reg(i), rsz.rs, rsz.cs));
       mRegLookup.insert(std::make_pair(arena.reg(i), name));
     }
-    std::unordered_map<const Mtx*, RegName>& used = sctx.get_mtxmap();
+    std::unordered_map<const Memory*, RegName>& used = sctx.get_mtxmap();
     std::vector<RegName> free;
     for (size_t i = 0; i < reg_count; ++i){
       double* m = arena.reg(i);
       RegName name = mRegLookup(m);
+      //TODO
       const Mtx* mtx = arena.get_cached_at(m);
       if (mtx == nullptr)
         free.push_back(name);
@@ -147,7 +148,9 @@ std::vector<Instr> cuda_register_allocation(SSA& ssa, CUDAInstrContext& ctx, con
       ctx.uncache(s2name);
     }
     ret.emplace_back(Instr(si.mType, dname, s1name, s2name));
-    //TODO: how to deal with load data back to CPU side?
+    //NOTE: we don't move data from GPU side to CPU side, the copying will only happen when it is explicitly requested by the matrix,
+    //      the result will be kept at the GPU side in the temporary buffer, anything that's not copied before using the same arena
+    //      for the next round of evluation could be lost
   }
 
   return ret;
@@ -207,6 +210,7 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
 
   for (auto& si : instr){
     switch (si.mType){
+      //TODO: add DRelu, DSigmoid, DTanh, Deriviative operation
       case InstrType::Add:
       case InstrType::Sub:
       case InstrType::EMul:
@@ -251,6 +255,7 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
         cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, s1size.rs, s2size.cs, s1size.cs, palpha, s1, lda, s2, ldb, pbeta, d, ldc);
         cublasDestroy(handle);
       }
+      //TODO: add CELoss and CEAccuracy function
       break;
       case InstrType::SubMC:
       case InstrType::EDivMC:

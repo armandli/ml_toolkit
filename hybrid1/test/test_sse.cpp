@@ -419,7 +419,8 @@ TEST_F(SSEComplexReduction, SumAll){
     for (size_t ic = 0; ic < 21; ++ic)
       expected += buffer1[ir * 24 + ic];
 
-  double t = sum_all_1d_sse_pd(buffer1, 24, 24);
+  double t;
+  sum_all_1d_sse_pd(&t, buffer1, 24, 24);
 
   EXPECT_NEAR(expected, t, 0.00000001);
 }
@@ -502,7 +503,8 @@ TEST_F(SSEComplexReduction, L2Loss){
       expected += buffer1[ir * 24 + ic] * buffer1[ir * 24 + ic];
   expected = expected * 0.5 * reg;
 
-  double res = loss_l2_1d_sse_pd(buffer1, reg, 24, 24);
+  double res;
+  loss_l2_1d_sse_pd(&res, buffer1, reg, 24, 24);
 
   EXPECT_NEAR(res, expected, 0.00000001);
 }
@@ -542,7 +544,8 @@ TEST_F(SSEComplexReduction, MSELoss){
     }
   s /= 24.;
 
-  double r = mse_loss_1d_sse_pd(buffer1, buffer5, 24, 24);
+  double r;
+  mse_loss_1d_sse_pd(&r, buffer1, buffer5, 24, 24);
 
   EXPECT_NEAR(r, s, 0.00000001);
 }

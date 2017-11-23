@@ -21,16 +21,16 @@ enum class SSAregType : unsigned {
   Nil,
 };
 
-class Mtx;
+class Memory;
 
 struct SSAregData {
-  SSAregType mType;
-  const Mtx* mMtxRef;
-  size_t     mRows;
-  size_t     mCols;
-  double     mVal;
+  SSAregType    mType;
+  const Memory* mMtxRef;
+  size_t        mRows;
+  size_t        mCols;
+  double        mVal;
 
-  SSAregData(const Mtx* ref, size_t rows, size_t cols):
+  SSAregData(const Memory* ref, size_t rows, size_t cols):
     mType(SSAregType::Mtx), mMtxRef(ref), mRows(rows), mCols(cols), mVal(0){}
   explicit SSAregData(double v):
     mType(SSAregType::Scl), mMtxRef(nullptr), mRows(0), mCols(0), mVal(v){}
@@ -39,7 +39,7 @@ struct SSAregData {
 };
 
 class SSAcontext {
-  std::unordered_map<const Mtx*, RegName>              mMtxMap;
+  std::unordered_map<const Memory*, RegName>              mMtxMap;
   std::unordered_map<double, RegName>                  mConstMap;
   std::unordered_map<RegName, SSAregData, RegNameHash> mRegData;
   int                                                  mCounter;
@@ -54,7 +54,7 @@ class SSAcontext {
 public:
   SSAcontext(): mCounter(1), mNil(SSAregData()) {}
 
-  RegName gen(const Mtx* mtx, size_t rows, size_t cols){
+  RegName gen(const Memory* mtx, size_t rows, size_t cols){
     RegName ret;
     if (mtx == nullptr){
       ret = nextName();
@@ -110,7 +110,7 @@ public:
     assert(!!!"unknown register name lookup occurred. this should not happen");
   }
 
-  void associate(RegName name, const Mtx& mtx){
+  void associate(RegName name, const Memory& mtx){
     assert(mRegData.find(name) != mRegData.end());
     SSAregData& dat = mRegData[name];
     assert(dat.mType == SSAregType::Mtx);
@@ -118,7 +118,7 @@ public:
     dat.mMtxRef = &mtx;
   }
 
-  std::unordered_map<const Mtx*, RegName>& get_mtxmap(){
+  std::unordered_map<const Memory*, RegName>& get_mtxmap(){
     return mMtxMap;
   }
 

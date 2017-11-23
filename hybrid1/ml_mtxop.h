@@ -52,7 +52,7 @@ size_t max_row_coeff_idx_2d_mtxop_pd(Srcp m, size_t row, size_t cols, size_t col
   return (elem - &m[row * colstride]) / sizeof(double);
 }
 
-double msvm_loss_2d_mtxop_pd(Srcp o, Srcp y, double f, size_t rows, size_t cols, size_t colstride){
+void msvm_loss_2d_mtxop_pd(Dstp dst, Srcp o, Srcp y, double f, size_t rows, size_t cols, size_t colstride){
   double loss = 0.;
   for (size_t ir = 0; ir < rows; ++ir){
     size_t midx = max_row_coeff_idx_2d_mtxop_pd(y, ir, cols, colstride);
@@ -65,19 +65,19 @@ double msvm_loss_2d_mtxop_pd(Srcp o, Srcp y, double f, size_t rows, size_t cols,
     });
     loss += sum - f * f;
   }
-  return loss / (double)rows;
+  *dst = loss / (double)rows;
 }
 
-double ce_loss_2d_mtxop_pd(Srcp o, Srcp y, size_t rows, size_t cols, size_t colstride){
+void ce_loss_2d_mtxop_pd(Dstp dst, Srcp o, Srcp y, size_t rows, size_t cols, size_t colstride){
   double loss = 0.;
   for (size_t ir = 0; ir < rows; ++ir){
     size_t yidx = max_row_coeff_idx_2d_mtxop_pd(y, ir, cols, colstride);
     loss += -1. * std::log(o[ir * colstride + yidx]);
   }
-  return loss / (double)rows;
+  *dst = loss / (double)rows;
 }
 
-double ce_accuracy_2d_mtxop_pd(Srcp o, Srcp y, size_t rows, size_t cols, size_t colstride){
+void ce_accuracy_2d_mtxop_pd(Dstp dst, Srcp o, Srcp y, size_t rows, size_t cols, size_t colstride){
   size_t count = 0;
   for (size_t ir = 0; ir < rows; ++ir){
     size_t oidx = max_row_coeff_idx_2d_mtxop_pd(o, ir, cols, colstride);
@@ -85,7 +85,7 @@ double ce_accuracy_2d_mtxop_pd(Srcp o, Srcp y, size_t rows, size_t cols, size_t 
     if (yidx == oidx)
       count++;
   }
-  return (double)count / (double)rows;
+  *dst = (double)count / (double)rows;
 }
 
 } // ML::MTXOP

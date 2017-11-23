@@ -563,7 +563,7 @@ void sum_rows_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t colstride){
     dst[ir] = sum_row_pd(&src[ir * colstride], colstride);
 }
 
-double sum_all_1d_sse_pd(Srcp src, size_t rows, size_t colstride){
+void sum_all_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t colstride){
   __m256d sumv = zd1;
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
     __m256d a = _mm256_loadu_pd(&src[i]);
@@ -571,7 +571,7 @@ double sum_all_1d_sse_pd(Srcp src, size_t rows, size_t colstride){
   }
   double suma[MTX_BLOCK_RSZ];
   _mm256_storeu_pd(suma, sumv);
-  return std::accumulate(suma, suma + MTX_BLOCK_RSZ, 0.);
+  *dst = std::accumulate(suma, suma + MTX_BLOCK_RSZ, 0.);
 }
 
 void mean_rows_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t colstride){
@@ -581,9 +581,9 @@ void mean_rows_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t co
   }
 }
 
-double mean_all_1d_sse_pd(Srcp src, size_t rows, size_t cols, size_t colstride){
-  double s = sum_all_1d_sse_pd(src, rows, colstride);
-  return s / ((double)rows * (double)cols);
+void mean_all_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t colstride){
+  sum_all_1d_sse_pd(dst, src, rows, colstride);
+  *dst = *dst / ((double)rows * (double)cols);
 }
 
 void sigmoid_2d_sse_pd(Dstp dst, Srcp m, size_t rows, size_t cols, size_t colstride){
@@ -666,7 +666,7 @@ void drelu_1d_sse_pd(Dstp dst, Srcp dm, Srcp m, size_t rows, size_t colstride){
   }
 }
 
-double loss_l2_1d_sse_pd(Srcp m, double reg, size_t rows, size_t colstride){
+void loss_l2_1d_sse_pd(Dstp dst, Srcp m, double reg, size_t rows, size_t colstride){
   __m256d sum = zd1;
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
     __m256d a = _mm256_loadu_pd(&m[i]);
@@ -677,7 +677,7 @@ double loss_l2_1d_sse_pd(Srcp m, double reg, size_t rows, size_t colstride){
   double r[MTX_BLOCK_RSZ];
   _mm256_storeu_pd(r, sum);
   double loss = std::accumulate(r, r + MTX_BLOCK_RSZ, 0.);
-  return loss * 0.5 * reg;
+  *dst = loss * 0.5 * reg;
 }
 
 //NOTE: softmax can only handle matrix value within 0.0 and 1.0, and 
@@ -721,12 +721,12 @@ double diff_square_sum_pd(Srcp o, Srcp y, size_t rows, size_t colstride){
   return std::accumulate(suma, suma + MTX_BLOCK_RSZ, 0.);
 }
 
-double mse_loss_1d_sse_pd(Srcp o, Srcp y, size_t rows, size_t colstride){
-  return diff_square_sum_pd(o, y, rows, colstride) / (double)rows;
+void mse_loss_1d_sse_pd(Dstp dst, Srcp o, Srcp y, size_t rows, size_t colstride){
+  *dst = diff_square_sum_pd(o, y, rows, colstride) / (double)rows;
 }
 
-double mse_accuracy_1d_sse_pd(Srcp o, Srcp y, size_t rows, size_t colstride){
-  return sqrt(diff_square_sum_pd(o, y, rows, colstride)) * 0.5 / (double)rows;
+void mse_accuracy_1d_sse_pd(Dstp dst, Srcp o, Srcp y, size_t rows, size_t colstride){
+  *dst = sqrt(diff_square_sum_pd(o, y, rows, colstride)) * 0.5 / (double)rows;
 }
 
 void deriviative_row_1d_sse_pd(Dstp dst, Srcp o, Srcp y, size_t rows, size_t colstride){
