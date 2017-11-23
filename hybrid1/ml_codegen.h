@@ -503,7 +503,7 @@ public:
     }
   }
 
-  void setRegSize(RegName name, size_t rows, size_t cols){
+  void set_reg_size(RegName name, size_t rows, size_t cols){
     assert(name.name[0] == REG);
     decltype(mRegMap)::iterator it = mRegMap.find(name);
     if (it != mRegMap.end()){
@@ -515,13 +515,13 @@ public:
     }
   }
 
-  RegName addReg(const RegData& data){
+  RegName add_reg(const RegData& data){
     RegName name = nextRegName();
     mRegMap.insert(std::make_pair(name, data));
     return name;
   }
 
-  RegName addMem(const Memory& mtx){
+  RegName add_mem(const Memory& mtx){
     decltype(mMtxMap)::iterator it = mMtxMap.find(&mtx);
     if (it == mMtxMap.end()){
       RegName name = nextMemName();
@@ -532,7 +532,7 @@ public:
       return (*it).second;
   }
 
-  RegName addConst(double val){
+  RegName add_const(double val){
     decltype(mValMap)::iterator it = mValMap.find(val);
     if (it == mValMap.end()){
       RegName name = nextConstName();
@@ -543,7 +543,7 @@ public:
       return (*it).second;
   }
 
-  RegName addNil(){
+  RegName add_nil(){
     RegName ret;
     ret.name[0] = 'n';
     return ret;

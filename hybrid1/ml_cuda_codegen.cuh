@@ -29,7 +29,7 @@ class CUDAInstrContext : public InstrContext {
 public:
   CUDAInstrContext(CUDArena& arena, RegSize rsz, size_t reg_count, SSAContext& sctx): InstrContext(), mArena(arena) {
     for (size_t i = 0; i < reg_count; ++i){
-      RegName name = addReg(RegData(arena.reg(i), rsz.rs, rsz.cs));
+      RegName name = add_reg(RegData(arena.reg(i), rsz.rs, rsz.cs));
       mRegLookup.insert(std::make_pair(arena.reg(i), name));
     }
     std::unordered_map<const Memory*, RegName>& used = sctx.get_mtxmap();
@@ -104,7 +104,7 @@ std::vector<Instr> cuda_register_allocation(SSA& ssa, CUDAInstrContext& ctx, con
             break;
           }
           if (sdat.mMtxRef != nullptr){
-            RegName mname = ctx.addMem(*sdat.mMtxRef);
+            RegName mname = ctx.add_mem(*sdat.mMtxRef);
             if (ctx.is_cached(*sdat.mMtxRef))
               ret = ctx.get_reg_for(*sdat.mMtxRef);
             else {
@@ -120,10 +120,10 @@ std::vector<Instr> cuda_register_allocation(SSA& ssa, CUDAInstrContext& ctx, con
         }
         break;
         case SSAregType::Scl:
-          ret = ctx.addConst(sdat.mVal);
+          ret = ctx.add_const(sdat.mVal);
         break;
         case SSAregType::Nil:
-          ret = ctx.addNil();
+          ret = ctx.add_nil();
         break;
         default: assert(false);
       }
@@ -223,7 +223,7 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
         assert(s1 != nullptr && s2 != nullptr && d != nullptr);
         RegSize s1size = find_size(si.mSrc1);
         assert(s1size.rs > 0 && s1size.cs > 0);
-        ctx.setRegSize(si.mDst, s1size.rs, s1size.cs);
+        ctx.set_reg_size(si.mDst, s1size.rs, s1size.cs);
         switch (si.mType){
           case InstrType::Add:  CUDA::add_1d_cuda_pd(d, s1, s2, roundup_row(s1size.rs), roundup_col(s1size.cs)); break;
           case InstrType::Sub:  CUDA::sub_1d_cuda_pd(d, s1, s2, roundup_row(s1size.rs), roundup_col(s1size.cs)); break;
@@ -243,7 +243,7 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
         RegSize s1size = find_size(si.mSrc1);
         RegSize s2size = find_size(si.mSrc2);
         assert(s1size.rs > 0 && s1size.cs > 0 && s2size.rs > 0 && s2size.cs > 0);
-        ctx.setRegSize(si.mDst, s1size.rs, s2size.cs);
+        ctx.set_reg_size(si.mDst, s1size.rs, s2size.cs);
         //TODO: reuse the cublas handle and all constant values
         int lda = s1size.rs, ldb = s1size.cs, ldc = s1size.rs;
         const double alpha = 1.;
@@ -266,7 +266,7 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
         assert(s1 != nullptr && d != nullptr);
         RegSize sz = find_size(si.mSrc1);
         assert(sz.rs > 0 && sz.cs > 0);
-        ctx.setRegSize(si.mDst, sz.rs, sz.cs);
+        ctx.set_reg_size(si.mDst, sz.rs, sz.cs);
         switch (si.mType){
           case InstrType::SubMC:  CUDA::sub_mc_2d_cuda_pd(d, s1, s2, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col(sz.cs)); break;
           case InstrType::EDivMC: CUDA::ediv_mc_2d_cuda_pd(d, s2, s2, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col(sz.cs)); break;
@@ -284,7 +284,7 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
         assert(s2 != nullptr && d != nullptr);
         RegSize sz = find_size(si.mSrc2);
         assert(sz.rs > 0 && sz.cs > 0);
-        ctx.setRegSize(si.mDst, sz.rs, sz.cs);
+        ctx.set_reg_size(si.mDst, sz.rs, sz.cs);
         switch (si.mType){
           case InstrType::SubCM:  CUDA::sub_cm_2d_cuda_pd(d, s1, s2, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col(sz.cs)); break;
           case InstrType::EDivCM: CUDA::ediv_cm_2d_cuda_pd(d, s1, s2, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col(sz.cs)); break;
@@ -322,7 +322,7 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
         double* d  = find_mem(si.mDst);
         assert(s1 != nullptr && d != nullptr);
         RegSize sz = find_size(s1);
-        ctx.setRegSize(si.mDst, sz.rs, sz.cs);
+        ctx.set_reg_size(si.mDst, sz.rs, sz.cs);
         CUDA::transpose_2d_cuda_pd(d, s1, roundup_row(sz.rs), roundup_col(sz.cs));
       }
       break;
@@ -334,7 +334,7 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
         double* d  = find_mem(si.mDst);
         assert(s1 != nullptr && d != nullptr);
         RegSize sz = find_size(s1);
-        ctx.setRegSize(si.mDst, sz.rs, sz.cs);
+        ctx.set_reg_size(si.mDst, sz.rs, sz.cs);
         switch (si.mType){
           case InstrType::Tanh:  CUDA::tanh_1d_cuda_pd(d, s1, roundup_row(sz.rs), roundup_col(sz.cs)); break;
           case InstrType::Exp:   CUDA::exp_2d_cuda_pd(d, s1, sz.rs, sz.cs, roundup_row(sz.rs), roundup_col(sz.cs)); break;
@@ -356,7 +356,7 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
         RegSize sz = find_size(s1);
         assert(sz.rs > 0 && sz.cs > 0);
         if (ctx.type(si.mDst) == RegType::Reg)
-          ctx.setRegSize(si.mDst, sz.rs, sz.cs);
+          ctx.set_reg_size(si.mDst, sz.rs, sz.cs);
         sz.rs = roundup_row(sz.rs);
         sz.cs = roundup_col(sz.cs);
         switch (si.mType){

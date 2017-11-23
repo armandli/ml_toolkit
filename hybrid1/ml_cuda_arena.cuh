@@ -51,7 +51,7 @@ public:
     mCount = count;
   }
 
-  size_t regSize() const { return mRegSize; }
+  size_t reg_size() const { return mRegSize; }
   size_t size() const { return mCount; }
 
   double* reg(size_t idx){

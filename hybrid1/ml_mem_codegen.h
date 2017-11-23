@@ -37,7 +37,7 @@ class MemInstrContext : public InstrContext {
 public:
   MemInstrContext(MemArena& arena, RegSize rsz, size_t reg_count): InstrContext(), mArena(arena) {
     for (size_t i = 0; i < reg_count; ++i)
-      addReg(RegData(arena.reg(i), rsz.rs, rsz.cs));
+      add_reg(RegData(arena.reg(i), rsz.rs, rsz.cs));
   }
 
   std::queue<RegName> gen_regs(){
@@ -66,7 +66,7 @@ std::vector<Instr> local_register_allocation(SSA& ssa, MemInstrContext& ctx, con
       switch (sdat.mType){
         case SSAregType::Mtx:
           if (sdat.mMtxRef != nullptr)
-            ret = ctx.addMem(*sdat.mMtxRef);
+            ret = ctx.add_mem(*sdat.mMtxRef);
           else {
             std::unordered_map<RegName, RegName, RegNameHash>::iterator it = tmap.find(sname);
             if (it == tmap.end()){
@@ -80,10 +80,10 @@ std::vector<Instr> local_register_allocation(SSA& ssa, MemInstrContext& ctx, con
           }
         break;
         case SSAregType::Scl:
-          ret = ctx.addConst(sdat.mVal);
+          ret = ctx.add_const(sdat.mVal);
         break;
         case SSAregType::Nil:
-          ret = ctx.addNil();
+          ret = ctx.add_nil();
         break;
         default: assert(false);
       }
@@ -183,7 +183,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         RegSize s1size = find_size(si.mSrc1);
         assert(s1size.rs > 0 && s1size.cs > 0);
         if (ctx.type(si.mDst) == RegType::Reg)
-          ctx.setRegSize(si.mDst, s1size.rs, s1size.cs);
+          ctx.set_reg_size(si.mDst, s1size.rs, s1size.cs);
         switch (si.mType){
           case InstrType::Add:         SSE::add_1d_sse_pd(d, s1, s2, roundup_row(s1size.rs), roundup_col(s1size.cs)); break;
           case InstrType::Sub:         SSE::sub_1d_sse_pd(d, s1, s2, roundup_row(s1size.rs), roundup_col(s1size.cs)); break;
@@ -208,7 +208,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         RegSize s2size = find_size(si.mSrc2);
         assert(s1size.rs > 0 && s1size.cs > 0 && s2size.rs > 0 && s2size.cs > 0);
         if (ctx.type(si.mDst) == RegType::Reg)
-          ctx.setRegSize(si.mDst, s1size.rs, s2size.cs);
+          ctx.set_reg_size(si.mDst, s1size.rs, s2size.cs);
         s1size.rs = roundup_row(s1size.rs);
         s1size.cs = roundup_col(s1size.cs);
         s2size.rs = roundup_row(s2size.rs);
@@ -229,7 +229,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         RegSize s1size = find_size(si.mSrc1);
         assert(s1size.rs > 0 && s1size.cs > 0);
         if (ctx.type(si.mDst) == RegType::Reg)
-          ctx.setRegSize(si.mDst, 1, 1);
+          ctx.set_reg_size(si.mDst, 1, 1);
         switch (si.mType){
           case InstrType::CELoss:     MTXOP::ce_loss_2d_mtxop_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
           case InstrType::CEAccuracy: MTXOP::ce_accuracy_2d_mtxop_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
@@ -248,7 +248,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         RegSize s1size = find_size(si.mSrc1);
         assert(s1size.rs > 0 && s1size.cs > 0);
         if (ctx.type(si.mDst) == RegType::Reg)
-          ctx.setRegSize(si.mDst, s1size.rs, s1size.cs);
+          ctx.set_reg_size(si.mDst, s1size.rs, s1size.cs);
         switch (si.mType){
           case InstrType::SubMC:  SSE::sub_mc_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
           case InstrType::EDivMC: SSE::ediv_mc_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
@@ -269,7 +269,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         RegSize s2size = find_size(si.mSrc2);
         assert(s2size.rs > 0 && s2size.cs > 0);
         if (ctx.type(si.mDst) == RegType::Reg)
-          ctx.setRegSize(si.mDst, s2size.rs, s2size.cs);
+          ctx.set_reg_size(si.mDst, s2size.rs, s2size.cs);
         switch (si.mType){
           case InstrType::SubCM:  SSE::sub_cm_2d_sse_pd(s1, d, s2, s2size.rs, s2size.cs, roundup_col(s2size.cs)); break;
           case InstrType::EDivCM: SSE::ediv_cm_2d_sse_pd(s1, d, s2, s2size.rs, s2size.cs, roundup_col(s2size.cs)); break;
@@ -309,7 +309,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         RegSize s1size = find_size(si.mSrc1);
         assert(s1size.rs > 0 && s1size.cs > 0);
         if (ctx.type(si.mDst) == RegType::Reg)
-          ctx.setRegSize(si.mDst, s1size.cs, s1size.rs);
+          ctx.set_reg_size(si.mDst, s1size.cs, s1size.rs);
         SSE::transpose4x4_2d_sse_pd(d, s1, roundup_row(s1size.rs), roundup_col(s1size.cs));
       }
       break;
@@ -326,7 +326,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         RegSize sz = find_size(si.mSrc1);
         assert(sz.rs > 0 && sz.cs > 0);
         if (ctx.type(si.mDst) == RegType::Reg)
-          ctx.setRegSize(si.mDst, sz.rs, sz.cs);
+          ctx.set_reg_size(si.mDst, sz.rs, sz.cs);
         switch (si.mType){
           case InstrType::Tanh:    SSE::tanh_1d_sse_pd(d, s1, sz.rs, roundup_col(sz.cs)); break;
           case InstrType::Softmax: SSE::softmax_r_2d_sse_pd(d, s1, sz.rs, roundup_col(sz.cs)); break;
