@@ -61,6 +61,9 @@ enum class InstrType : unsigned {
   GTMC,
   GTCM,
   Mask,
+  GT0MC,
+  GT0CM,
+  DRelu,
   Trn,
   Not,
   Tanh,
@@ -68,9 +71,7 @@ enum class InstrType : unsigned {
   Exp,
   Isnan,
   Isnan0,
-  GT0MC,
-  GT0CM,
-  DRelu,
+  Sum,
   CELoss,
   CEAccuracy,
   //TODO: expand operation here
@@ -104,6 +105,7 @@ std::ostream& operator << (std::ostream& out, const Instr& instr){
     case InstrType::Isnan:  out << "isnan("; break;
     case InstrType::Isnan0: out << "isnan0("; break;
     case InstrType::Sigmoid:out << "sigmoid("; break;
+    case InstrType::Sum:    out << "sum("; break;
     default:;
   }
   out << instr.mSrc1;
@@ -150,7 +152,7 @@ std::ostream& operator << (std::ostream& out, const Instr& instr){
     case InstrType::Trn: case InstrType::Not:
       /* DO NOTHING */
     break;
-    case InstrType::Exp: case InstrType::Isnan: case InstrType::Isnan0: case InstrType::Sigmoid:
+    case InstrType::Exp: case InstrType::Isnan: case InstrType::Isnan0: case InstrType::Sigmoid: case InstrType::Sum:
       out << ")";
     break;
     //TODO: expand operation here

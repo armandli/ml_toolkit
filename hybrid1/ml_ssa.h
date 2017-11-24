@@ -142,6 +142,14 @@ template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<Isnan0Op, X>>& 
   ret.instructions.emplace_back(Instr(InstrType::Isnan0, dst, p1, p2));
   return dst;
 }
+template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<SumOp, X>>& expr){
+  RegName p1 = to_ssa(ret, static_cast<const Uop<SumOp, X>&>(expr).param());
+  const SSAregData& p1dat = ret.context.lookup(p1);
+  RegName p2 = ret.context.gen();
+  RegName dst = ret.context.gen(nullptr, 1, 1);
+  ret.instructions.emplace_back(Instr(InstrType::Sum, dst, p1, p2));
+  return dst;
+}
 template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<AddOp, X, Y>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Bop<AddOp, X, Y>&>(expr).param1());
   RegName p2 = to_ssa(ret, static_cast<const Bop<AddOp, X, Y>&>(expr).param2());
@@ -431,6 +439,9 @@ std::ostream& operator << (std::ostream& out, const SSA& ssa){
       break;
       case InstrType::Sigmoid:
         out << instr.mDst << " <- sigmoid(" << instr.mSrc1 << ")\n";
+      break;
+      case InstrType::Sum:
+        out << instr.mDst << " <- sum(" << instr.mSrc1 << ")\n";
       break;
       //TODO: expand operation here
       default: assert(false);

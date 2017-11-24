@@ -339,6 +339,17 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         }
       }
       break;
+      case InstrType::Sum: {
+        double* s1 = find_mem(si.mSrc1);
+        double* d = find_mem(si.mDst);
+        assert(s1 != nullptr && d != nullptr);
+        RegSize sz = find_size(si.mSrc1);
+        assert(sz.rs > 0 && sz.cs > 0);
+        if (ctx.type(si.mDst) == RegType::Reg)
+          ctx.set_reg_size(si.mDst, 1, 1);
+        SSE::sum_all_2d_sse_pd(d, s1, sz.rs, sz.cs, roundup_col(sz.cs));
+      }
+      break;
       //TODO: expand operation here
       default: assert(false);
     }

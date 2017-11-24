@@ -189,6 +189,22 @@ Uop<Isnan0Op, X> isnan0(MtxBase<X>&& a){
 }
 /* END isnan then 0 */
 
+/* BEGIN sum all */
+struct SumOp {
+  static void debug(std::stringstream& ss){
+    ss << "sum";
+  }
+};
+
+Uop<SumOp, MtxRef> sum(MtxRef&& a){
+  return Uop<SumOp, MtxRef>(std::move(a));
+}
+template <typename X>
+Uop<SumOp, X> sum(MtxBase<X>&& a){
+  return Uop<SumOp, X>(static_cast<X&&>(a));
+}
+/* END sum all */
+
 template <typename Op, typename X, typename Y>
 class Bop : public MtxBase<Bop<Op,X,Y>> {
   X mx;
