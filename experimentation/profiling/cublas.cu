@@ -19,6 +19,7 @@ inline void gpu_assert(cudaError_t code, const char *file, int line, bool abort=
 #define BSZ 128
 #define TSZ 16
 #define SZ (BSZ * TSZ)
+#define SZA 2000
 
 using namespace std;
 
@@ -26,12 +27,17 @@ struct Mtx {
   double* data;
   size_t rows;
   size_t cols;
+  size_t rowstride;
+  size_t colstride;
   bool is_cuda;
 
-  Mtx(bool is_cuda, size_t rows, size_t cols):
-    data(nullptr), rows(rows), cols(cols), is_cuda(is_cuda) {
-    if (is_cuda) { gpu_errchk(cudaMalloc(&data, sizeof(double) * rows * cols)); }
-    else         data = new double[rows * cols];
+  Mtx(bool is_cuda, size_t rows, size_t cols, size_t rowstride, size_t colstride):
+    data(nullptr), rows(rows), cols(cols), rowstride(rowstride), colstride(colstride), is_cuda(is_cuda) {
+    if (is_cuda) { gpu_errchk(cudaMalloc(&data, sizeof(double) * rowstride * colstride)); }
+    else {
+      data = new double[rowstride * colstride];
+      memset(data, 0, sizeof(double) * rowstride * colstride);
+    }
   }
   ~Mtx(){
     if (is_cuda) { gpu_errchk(cudaFree(data)); }
@@ -44,7 +50,7 @@ ostream& operator<<(ostream& out, Mtx& m){
 
   for (size_t i = 0; i < m.rows; ++i){
     for (size_t j = 0; j < m.cols; ++j)
-      cout << m.data[i * m.cols + j] << " ";
+      cout << m.data[i * m.colstride + j] << " ";
     cout << endl;
   }
   return out;
@@ -78,10 +84,12 @@ void random_matrix(Mtx& m){
 
 void generate_sample(Mtx& a, Mtx& b){
   assert(a.is_cuda == false && b.is_cuda == false);
-  for (size_t i = 0; i < a.rows * a.cols; ++i)
-    a.data[i] = (double)i;
-  for (size_t i = 0; i < b.rows * b.cols; ++i)
-    b.data[i] = (double)i;
+  for (size_t ir = 0; ir < a.rows; ++ir)
+    for (size_t ic = 0; ic < a.cols; ++ic)
+      a.data[ir * a.colstride + ic] = (double)1.;
+  for (size_t ir = 0; ir < b.rows; ++ir)
+    for (size_t ic = 0; ic < b.cols; ++ic)
+      b.data[ir * b.colstride + ic] = (double)1.;
 }
 
 clock_t matrix_multiply(Mtx& c, Mtx& a, Mtx& b){
@@ -96,7 +104,7 @@ clock_t matrix_multiply(Mtx& c, Mtx& a, Mtx& b){
 }
 
 void mmul_cublas(Mtx& c, Mtx& a, Mtx& b){
-  int lda = a.rows, ldb = a.cols, ldc = a.rows;
+  int lda = a.colstride, ldb = b.colstride, ldc = b.colstride;
   const double alpha = 1.;
   const double beta = 0.;
   const double* palpha = &alpha;
@@ -112,8 +120,11 @@ void mmul_cublas(Mtx& c, Mtx& a, Mtx& b){
 }
 
 int main(){
-  Mtx a(false, SZ, SZ), b(false, SZ, SZ), c(false, SZ, SZ), d(false, SZ, SZ);
-  Mtx da(true, SZ, SZ), db(true, SZ, SZ), dc(true, SZ, SZ);
+  Mtx a(false, SZA, SZA, SZ, SZ), b(false, SZA, SZA, SZ, SZ), c(false, SZA, SZA, SZ, SZ), d(false, SZA, SZA, SZ, SZ);
+  Mtx da(true, SZA, SZA, SZ, SZ), db(true, SZA, SZA, SZ, SZ), dc(true, SZA, SZA, SZ, SZ);
+
+//  Mtx a(false, SZ, SZ, SZ, SZ), b(false, SZ, SZ, SZ, SZ), c(false, SZ, SZ, SZ, SZ), d(false, SZ, SZ, SZ, SZ);
+//  Mtx da(true, SZ, SZ, SZ, SZ), db(true, SZ, SZ, SZ, SZ), dc(true, SZ, SZ, SZ, SZ);
 
   generate_sample(a, b);
 
@@ -121,13 +132,15 @@ int main(){
 //  random_matrix(b);
 
   clock_t timing_start = clock();
-  cudaMemcpy(da.data, a.data, sizeof(double) * a.rows * a.cols, cudaMemcpyHostToDevice);
-  cudaMemcpy(db.data, b.data, sizeof(double) * b.rows * b.cols, cudaMemcpyHostToDevice);
+  cudaMemcpy(da.data, a.data, sizeof(double) * a.rowstride * a.colstride, cudaMemcpyHostToDevice);
+  cudaMemcpy(db.data, b.data, sizeof(double) * b.rowstride * b.colstride, cudaMemcpyHostToDevice);
 
   mmul_cublas(dc, da, db);
 
-  cudaMemcpy(c.data, dc.data, sizeof(double) * c.rows * c.cols, cudaMemcpyDeviceToHost);
+  cudaMemcpy(c.data, dc.data, sizeof(double) * c.rowstride * c.colstride, cudaMemcpyDeviceToHost);
   cout << "Time: " << (clock() - timing_start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << endl;
+
+  cout << c;
 
 //  timing_start = clock();
 //  clock_t timing_end = matrix_multiply(d, a, b);

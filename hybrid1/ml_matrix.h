@@ -87,7 +87,8 @@ public:
   Mtx(size_t r, size_t c, double v = 0.):
     Memory(nullptr, r, c), mRowStride(roundup_row(r)), mColStride(roundup_col(c)) {
     set_data(new double[mRowStride * mColStride]);
-    SSE::const_init_2d_sse_pd(data(), v, rows(), cols(), mRowStride, mColStride);
+    if (v == 0.) memset(data(), 0, sizeof(double) * mRowStride * mColStride);
+    else         SSE::const_init_1d_sse_pd(data(), v, rows(), mColStride);
   }
   Mtx(size_t r, size_t c, RandomizationType rtype, double p1, double p2):
     Memory(nullptr, r, c), mRowStride(roundup_row(r)), mColStride(roundup_col(c)) {
@@ -131,8 +132,6 @@ public:
   }
 
   /* accessors */
-//  size_t rows() const { return mRows; }
-//  size_t cols() const { return mCols; }
   size_t rowstride() const { return mRowStride; }
   size_t colstride() const { return mColStride; }
   double operator()(size_t i, size_t j) const {
