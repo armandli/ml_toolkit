@@ -740,6 +740,23 @@ void sum_all_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t colstride){
   *dst = std::accumulate(suma, suma + MTX_BLOCK_RSZ, 0.);
 }
 
+//TODO: unit test
+void sum_all_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t colstride){
+  __m256d sumv = zd1;
+  double  sumd = 0.;
+  for (size_t ir = 0; ir < rows; ++ir){
+    for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
+      __m256d a = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      sumv = _mm256_add_pd(sumv, a);
+    }
+    for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic)
+      sumd += src[ir * colstride + ic];
+  }
+  double suma[MTX_BLOCK_RSZ];
+  _mm256_storeu_pd(suma, sumv);
+  *dst = std::accumulate(suma, suma + MTX_BLOCK_RSZ, sumd);
+}
+
 void mean_rows_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t colstride){
   for (size_t ir = 0; ir < rows; ++ir){
     double s = sum_row_pd(&src[ir * colstride], colstride);
@@ -881,6 +898,27 @@ void loss_l2_1d_sse_pd(Dstp dst, Srcp m, double reg, size_t rows, size_t colstri
   double r[MTX_BLOCK_RSZ];
   _mm256_storeu_pd(r, sum);
   double loss = std::accumulate(r, r + MTX_BLOCK_RSZ, 0.);
+  *dst = loss * 0.5 * reg;
+}
+
+//TODO: unit test
+void loss_l2_2d_sse_pd(Dstp dst, Srcp m, double reg, size_t rows, size_t cols, size_t colstride){
+  __m256d sumv = zd1;
+  double  sumd = 0.;
+  for (size_t ir = 0; ir < rows; ++ir){
+    for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
+      __m256d a = _mm256_loadu_pd(&m[ir * colstride + ic]);
+      __m256d r = _mm256_mul_pd(a, a);
+      sumv = _mm256_add_pd(sumv, r);
+    }
+    for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
+      double d = m[ir * colstride + ic];
+      sumd += d * d;
+    }
+  }
+  double suma[MTX_BLOCK_RSZ];
+  _mm256_storeu_pd(suma, sumv);
+  double loss = std::accumulate(suma, suma + MTX_BLOCK_RSZ, sumd);
   *dst = loss * 0.5 * reg;
 }
 

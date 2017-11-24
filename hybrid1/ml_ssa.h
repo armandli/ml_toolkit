@@ -25,11 +25,12 @@ struct SSAMtxCommunicator {
   static void reset_mtx_size(Mtx& dst, const SSAregData& data){
     size_t rowstride = roundup_row(data.mRows);
     size_t colstride = roundup_col(data.mCols);
-    if (dst.data() != nullptr)
+    if (dst.data() != nullptr && dst.rowstride() * dst.colstride() != rowstride * colstride)
       dst.delete_data();
+    if (dst.data() == nullptr)
+      dst.set_data(new double[rowstride * colstride]);
     dst.mRowStride = rowstride;
     dst.mColStride = colstride;
-    dst.set_data(new double[rowstride * colstride]);
     dst.set_rows(data.mRows);
     dst.set_cols(data.mCols);
   }

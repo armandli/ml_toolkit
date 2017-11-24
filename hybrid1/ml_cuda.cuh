@@ -1408,6 +1408,11 @@ void loss_l2_1d_cuda_pd(double* dst, double* src, double reg, size_t rowstride, 
   emul_const_2d_cukernel_pd<<< final_blocks, final_tpb >>>(dst, dst, 0.5 * reg, 1, 1, 1);
 }
 
+//TODO: unit test
+void loss_l2_2d_cuda_pd(double* dst, double* src, double reg, size_t rowstride, size_t colstride, double* tempbuf){
+  //TODO
+}
+
 // row based softmax operation
 __global__ void exp_2d_cukernel_pd(double* dst, const double* src, size_t rows, size_t cols, size_t colstride){
   const size_t rowid = blockDim.y * blockIdx.y + threadIdx.y;
