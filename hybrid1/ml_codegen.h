@@ -52,6 +52,7 @@ struct LocalValueNumberHash {
       case InstrType::Sum:        pr[0] = 25; break;
       case InstrType::L2Loss:     pr[0] = 26; break;
       case InstrType::Sqrt:       pr[0] = 27; break;
+      case InstrType::DSS:        pr[0] = 28; break;
       //TODO: expand operation here
       default: assert(false);
     }
@@ -91,7 +92,7 @@ void local_value_numbering(SSA& ssa){
       break;
       // cases where order does matter
       case InstrType::Sub: case InstrType::EDiv: case InstrType::Dot: case InstrType::GT: case InstrType::Mask:
-      case InstrType::DRelu: case InstrType::CELoss: case InstrType::CEAccuracy:
+      case InstrType::DRelu: case InstrType::CELoss: case InstrType::CEAccuracy: case InstrType::DSS:
       case InstrType::SubMC: case InstrType::SubCM: case InstrType::EDivMC: case InstrType::EDivCM:
       case InstrType::GTMC: case InstrType::GTCM: case InstrType::GT0MC: case InstrType::GT0CM:
       case InstrType::Trn: case InstrType::Not: case InstrType::Tanh: case InstrType::Softmax:
@@ -401,7 +402,22 @@ void select_instruction(SSA& ssa){
       //TODO: alternative way of evaluating isnan
     }
 
-    void consumeDeriviative1(size_t idx){
+    bool consumeDSS2(size_t idx){
+      if (idx == std::numeric_limits<size_t>::max()) return false;
+      const Instr& instr = ssa.instructions[idx];
+      if (instr.mType == InstrType::Sum){
+        done[idx] = true;
+        RegName src1 = segment[0].mSrc1;
+        RegName src2 = segment[0].mSrc2;
+        RegName dst = instr.mDst;
+        segment.clear();
+        segment.emplace_back(Instr(InstrType::DSS, dst, src1, src2));
+        return true;
+      }
+      return false;
+    }
+
+    void consumeDeriviative1DSS1(size_t idx){
       if (idx == std::numeric_limits<size_t>::max()) return;
       const Instr& instr = ssa.instructions[idx];
       if (instr.mType == InstrType::EDivMC){
@@ -413,6 +429,10 @@ void select_instruction(SSA& ssa){
         if (pdat.mRows != s2dat.mVal)
           return;
         consumeDeriviative2(next_use(idx));
+      }
+      if (instr.mType == InstrType::EMul && instr.mSrc1 == instr.mSrc2){
+        if (consumeDSS2(next_use(idx)))
+          done[idx] = true;
       }
     }
 
@@ -439,7 +459,7 @@ void select_instruction(SSA& ssa){
           consumeDSigmoid2(next_use(idx), idx);
         break;
         case InstrType::Sub:
-          consumeDeriviative1(next_use(idx));
+          consumeDeriviative1DSS1(next_use(idx));
         break;
         default:;
       }

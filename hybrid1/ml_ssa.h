@@ -364,6 +364,9 @@ std::ostream& operator << (std::ostream& out, const SSA& ssa){
       case InstrType::Deriviative:
         out << instr.mDst << " <- deriviative(" << instr.mSrc1 << "," << instr.mSrc2 << ")\n";
       break;
+      case InstrType::DSS:
+        out << instr.mDst << " <- dss(" << instr.mSrc1 << "," << instr.mSrc2 << ")\n";
+      break;
       case InstrType::AddMC: {
         const SSAregData& arg1 = ssa.context.lookup(instr.mSrc1);
         const SSAregData& arg2 = ssa.context.lookup(instr.mSrc2);

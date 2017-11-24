@@ -522,7 +522,7 @@ TEST_F(SSEComplexReduction, Softmax){
       expected1[ir * 24 + ic] = exp(buffer1[ir * 24 + ic]) / s;
   }
 
-  softmax_r_2d_sse_pd(buffer2, buffer1, 24, 24);
+  softmax_r_2d_sse_pd(buffer2, buffer1, 24, 21, 24);
   
   for (size_t ir = 0; ir < 24; ++ir)
     for (size_t ic = 0; ic < 21; ++ic)

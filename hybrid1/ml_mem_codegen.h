@@ -175,7 +175,8 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
       case InstrType::DRelu:
       case InstrType::DSigmoid:
       case InstrType::DTanh:
-      case InstrType::Deriviative: {
+      case InstrType::Deriviative:
+      case InstrType::DSS: {
         double* s1 = find_mem(si.mSrc1);
         double* s2 = find_mem(si.mSrc2);
         double* d  = find_mem(si.mDst);
@@ -195,6 +196,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
           case InstrType::DSigmoid:    SSE::dsigmoid_1d_sse_pd(d, s1, s2, s1size.rs, roundup_col(s1size.cs)); break;
           case InstrType::DTanh:       SSE::dtanh_1d_sse_pd(d, s1, s2, s1size.rs, roundup_col(s1size.cs)); break;
           case InstrType::Deriviative: SSE::deriviative_row_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
+          case InstrType::DSS:         SSE::diff_square_sum_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
           default: assert(false);
         }
       }

@@ -957,18 +957,22 @@ void softmax_r_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t colstride){
 }
 
 //TODO: unit test
+//TODO: BUG!!!
 void softmax_r_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t colstride){
   for (size_t ir = 0; ir < rows; ++ir){
     __m256d rowsumv = zd1;
+    double  rowsumd = 0.;
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
       __m256d a = _mm256_loadu_pd(&src[ir * colstride + ic]);
       a = SPPL::_mm256_fexp_pd(a);
       rowsumv = _mm256_add_pd(rowsumv, a);
     }
+    for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic)
+      rowsumd += std::exp(src[ir * colstride + ic]);
     double rowsuma[MTX_BLOCK_RSZ];
     _mm256_storeu_pd(rowsuma, rowsumv);
-    double sum = std::accumulate(rowsuma, rowsuma + MTX_BLOCK_RSZ, 0.);
-    sum = std::accumulate(&src[ir * colstride + (cols & ~MTX_BLOCK_RMASK)], &src[ir * colstride + cols], sum);
+    //double sum = std::accumulate(rowsuma, rowsuma + MTX_BLOCK_RSZ, rowsumd);
+    double sum = std::accumulate(rowsuma, rowsuma + MTX_BLOCK_RSZ, 0.) + rowsumd;
 
     __m256d sumv = _mm256_set1_pd(sum);
     for (size_t ic = 0; ic < colstride; ic += MTX_BLOCK_RSZ){
@@ -981,7 +985,8 @@ void softmax_r_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t co
 }
 
 //TODO: do not expose this function
-double diff_square_sum_pd(Srcp o, Srcp y, size_t rows, size_t colstride){
+//TODO: change this function's output style and function name
+void diff_square_sum_1d_sse_pd(Dstp dst, Srcp o, Srcp y, size_t rows, size_t colstride){
   __m256d sum = _mm256_set1_pd(0.);
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
     __m256d a = _mm256_loadu_pd(&o[i]);
@@ -993,15 +998,49 @@ double diff_square_sum_pd(Srcp o, Srcp y, size_t rows, size_t colstride){
 
   double suma[MTX_BLOCK_RSZ];
   _mm256_storeu_pd(suma, sum);
-  return std::accumulate(suma, suma + MTX_BLOCK_RSZ, 0.);
+  *dst = std::accumulate(suma, suma + MTX_BLOCK_RSZ, 0.);
 }
 
 void mse_loss_1d_sse_pd(Dstp dst, Srcp o, Srcp y, size_t rows, size_t colstride){
-  *dst = diff_square_sum_pd(o, y, rows, colstride) / (double)rows;
+  diff_square_sum_1d_sse_pd(dst, o, y, rows, colstride);
+  *dst = *dst / (double)rows;
 }
 
 void mse_accuracy_1d_sse_pd(Dstp dst, Srcp o, Srcp y, size_t rows, size_t colstride){
-  *dst = sqrt(diff_square_sum_pd(o, y, rows, colstride)) * 0.5 / (double)rows;
+  diff_square_sum_1d_sse_pd(dst, o, y, rows, colstride);
+  *dst = std::sqrt(*dst) * 0.5 / (double)rows;
+}
+
+//TODO: unit test
+void diff_square_sum_2d_sse_pd(Dstp dst, Srcp o, Srcp y, size_t rows, size_t cols, size_t colstride){
+  __m256d sumv = zd1;
+  double  sumd = 0.;
+  for (size_t ir = 0; ir < rows; ++ir){
+    for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
+      __m256d a = _mm256_loadu_pd(&o[ir * colstride + ic]);
+      __m256d b = _mm256_loadu_pd(&y[ir * colstride + ic]);
+      __m256d c = _mm256_sub_pd(a, b);
+      __m256d r = _mm256_mul_pd(c, c);
+      sumv      = _mm256_add_pd(sumv, r);
+    }
+    for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
+      double d = o[ir * colstride + ic] - y[ir * colstride + ic];
+      sumd += d * d;
+    }
+  }
+  double suma[MTX_BLOCK_RSZ];
+  _mm256_storeu_pd(suma, sumv);
+  *dst = std::accumulate(suma, suma + MTX_BLOCK_RSZ, sumd);
+}
+
+void mse_loss_2d_sse_pd(Dstp dst, Srcp o, Srcp y, size_t rows, size_t cols, size_t colstride){
+  diff_square_sum_2d_sse_pd(dst, o, y, rows, cols, colstride);
+  *dst = *dst / (double)rows;
+}
+
+void mse_accuracy_2d_sse_pd(Dstp dst, Srcp o, Srcp y, size_t rows, size_t cols, size_t colstride){
+  diff_square_sum_2d_sse_pd(dst, o, y, rows, cols, colstride);
+  *dst = std::sqrt(*dst) * 0.5 / (double)rows;
 }
 
 void deriviative_row_1d_sse_pd(Dstp dst, Srcp o, Srcp y, size_t rows, size_t colstride){
