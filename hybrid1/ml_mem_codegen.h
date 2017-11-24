@@ -341,6 +341,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
       case InstrType::Not:
       case InstrType::Isnan:
       case InstrType::Isnan0:
+      case InstrType::Sqrt:
       case InstrType::Sigmoid: {
         double* s1 = find_mem(si.mSrc1);
         double* d  = find_mem(si.mDst);
@@ -356,6 +357,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
           case InstrType::Not:     SSE::not_1d_sse_pd(d, s1, sz.rs, roundup_col(sz.cs)); break;
           case InstrType::Isnan:   SSE::isnan_1d_sse_pd(d, s1, sz.rs, roundup_col(sz.cs)); break;
           case InstrType::Isnan0:  SSE::isnan0_1d_sse_pd(d, s1, sz.rs, roundup_col(sz.cs)); break;
+          case InstrType::Sqrt:    SSE::sqrt_1d_sse_pd(d, s1, sz.rs, roundup_col(sz.cs)); break;
           case InstrType::Sigmoid: SSE::sigmoid_1d_sse_pd(d, s1, sz.rs, roundup_col(sz.cs)); break;
           default: assert(false);
         }

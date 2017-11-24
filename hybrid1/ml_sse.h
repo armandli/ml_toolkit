@@ -516,6 +516,15 @@ void isnan0_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t colst
 }
 
 //TODO: unit test
+void sqrt_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t colstride){
+  for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
+    __m256d a = _mm256_loadu_pd(&src[i]);
+    __m256d r = _mm256_sqrt_pd(a);
+    _mm256_storeu_pd(&dst[i], r);
+  }
+}
+
+//TODO: unit test
 void gt0_mc_1d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t colstride){
   const __m256d val = _mm256_set1_pd(v);
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){

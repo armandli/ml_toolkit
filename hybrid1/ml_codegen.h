@@ -51,6 +51,7 @@ struct LocalValueNumberHash {
       case InstrType::CEAccuracy: pr[0] = 24; break;
       case InstrType::Sum:        pr[0] = 25; break;
       case InstrType::L2Loss:     pr[0] = 26; break;
+      case InstrType::Sqrt:       pr[0] = 27; break;
       //TODO: expand operation here
       default: assert(false);
     }
@@ -95,6 +96,7 @@ void local_value_numbering(SSA& ssa){
       case InstrType::GTMC: case InstrType::GTCM: case InstrType::GT0MC: case InstrType::GT0CM:
       case InstrType::Trn: case InstrType::Not: case InstrType::Tanh: case InstrType::Softmax:
       case InstrType::Exp: case InstrType::Isnan: case InstrType::Isnan0: case InstrType::Sum:
+      case InstrType::Sqrt:
         /* DO NOTHING */
       break;
       //TODO: expand operation here

@@ -478,7 +478,7 @@ void not_2d_cuda_pd(double* dst, double* src, size_t rows, size_t cols, size_t r
 }
 
 //TODO: unit test
-__global__ isnan_2d_cukernel_pd(double* dst, double* src, size_t rows, size_t cols, size_t colstride){
+__global__ void isnan_2d_cukernel_pd(double* dst, double* src, size_t rows, size_t cols, size_t colstride){
   const size_t rowid = blockDim.y * blockIdx.y + threadIdx.y;
 
   if (rowid >= rows) return;
@@ -504,7 +504,7 @@ void isnan_2d_cuda_pd(double* dst, double* src, size_t rows, size_t cols, size_t
 }
 
 //TODO: unit test
-__global__ isnan0_2d_cukernel_pd(double* dst, double* src, size_t rows, size_t cols, size_t colstride){
+__global__ void isnan0_2d_cukernel_pd(double* dst, double* src, size_t rows, size_t cols, size_t colstride){
   const size_t rowid = blockDim.y * blockIdx.y + threadIdx.y;
 
   if (rowid >= rows) return;
@@ -526,6 +526,30 @@ void isnan0_2d_cuda_pd(double* dst, double* src, size_t rows, size_t cols, size_
   dim3 tpb(bs.cpb, bs.rpb);
   dim3 blocks(std::max(colstride / bs.cpb / CUDA_SLICE_SZ, 1UL), rowstride / bs.rpb);
   isnan0_2d_cukernel_pd<<<blocks, tpb>>>(dst, src, rows, cols, colstride);
+}
+
+//TODO: unit test
+__global__ void sqrt_2d_cukernel_pd(double* dst, double* src, size_t rows, size_t cols, size_t colstride){
+  const size_t rowid = blockDim.y * blockIdx.y + threadIdx.y;
+
+  if (rowid >= rows) return;
+
+  const size_t idmax = rowid * colstride + cols;
+  const size_t inc = blockDim.x * gridDim.x;
+
+  size_t id = rowid * colstride + blockDim.x * blockIdx.x + threadIdx.x;
+
+  while (id < idmax){
+    dst[id] = sqrt(src[id]);
+    id += inc;
+  }
+}
+
+void sqrt_2d_cuda_pd(double* dst, double* src, size_t rows, size_t cols, size_t rowstride, size_t colstride){
+  BlkSz bs = get_gpu_block_size(rowstride, colstride);
+  dim3 tpb(bs.cpb, bs.rpb);
+  dim3 blocks(std::max(colstride / bs.cpb / CUDA_SLICE_SZ, 1UL), rowstride / bs.rpb);
+  sqrt_2d_cukernel_pd<<<blocks, tpb>>>(dst, src, rows, cols, colstride);
 }
 
 //TODO: unit test

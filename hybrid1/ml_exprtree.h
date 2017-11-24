@@ -189,6 +189,22 @@ Uop<Isnan0Op, X> isnan0(MtxBase<X>&& a){
 }
 /* END isnan then 0 */
 
+/* BEGIN sqrt */
+struct SqrtOp {
+  static void debug(std::stringstream& ss){
+    ss << "sqrt";
+  }
+};
+
+Uop<SqrtOp, MtxRef> sqrt(MtxRef&& a){
+  return Uop<SqrtOp, MtxRef>(std::move(a));
+}
+template <typename X>
+Uop<SqrtOp, X> sqrt(MtxBase<X>&& a){
+  return Uop<SqrtOp, X>(static_cast<X&&>(a));
+}
+/* END sqrt */
+
 /* BEGIN sum all */
 struct SumOp {
   static void debug(std::stringstream& ss){
