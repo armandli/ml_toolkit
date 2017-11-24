@@ -509,7 +509,27 @@ TEST_F(SSEComplexReduction, L2Loss){
   EXPECT_NEAR(res, expected, 0.00000001);
 }
 
-TEST_F(SSEComplexReduction, Softmax){
+TEST_F(SSEComplexReduction, Softmax1){
+  for (size_t ir = 0; ir < 24; ++ir)
+    for (size_t ic = 0; ic < 24; ++ic)
+      buffer1[ir * 24 + ic] = random_double_softmax();
+
+  for (size_t ir = 0; ir < 24; ++ir){
+    double s = 0.;
+    for (size_t ic = 0; ic < 24; ++ic)
+      s += std::exp(buffer1[ir * 24 + ic]);
+    for (size_t ic = 0; ic < 24; ++ic)
+      expected1[ir * 24 + ic] = exp(buffer1[ir * 24 + ic]) / s;
+  }
+
+  softmax_r_2d_sse_pd(buffer2, buffer1, 24, 24, 24);
+  
+  for (size_t ir = 0; ir < 24; ++ir)
+    for (size_t ic = 0; ic < 24; ++ic)
+      EXPECT_NEAR(expected1[ir * 24 + ic], buffer2[ir * 24 + ic], 0.008); //SSE fexp only can handle sig fig to 0.01
+}
+
+TEST_F(SSEComplexReduction, Softmax2){
   for (size_t ir = 0; ir < 24; ++ir)
     for (size_t ic = 0; ic < 21; ++ic)
       buffer1[ir * 24 + ic] = random_double_softmax();
