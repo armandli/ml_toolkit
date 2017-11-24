@@ -295,11 +295,33 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         }
         double* d = find_mem(si.mDst);
         assert(arg != nullptr && d != nullptr);
+        if (ctx.type(si.mDst) == RegType::Reg)
+          ctx.set_reg_size(si.mDst, sz.rs, sz.cs);
         switch (si.mType){
           case InstrType::AddMC:  SSE::add_const_1d_sse_pd(d, arg, val, sz.rs, roundup_col(sz.cs)); break;
           case InstrType::EMulMC: SSE::emul_const_1d_sse_pd(d, arg, val, sz.rs, roundup_col(sz.cs)); break;
           default: assert(false);
         }
+      }
+      break;
+      case InstrType::L2Loss: {
+        double val = nan("");
+        double* arg = nullptr;
+        RegSize sz = {0, 0};
+        if (ctx.type(si.mSrc1) == RegType::Scl){
+          val = ctx.lookup_val(si.mSrc1);
+          arg = find_mem(si.mSrc2);
+          sz  = find_size(si.mSrc2);
+        } else {
+          val = ctx.lookup_val(si.mSrc2);
+          arg = find_mem(si.mSrc1);
+          sz  = find_size(si.mSrc1);
+        }
+        double* d = find_mem(si.mDst);
+        assert(arg != nullptr && d != nullptr);
+        if (ctx.type(si.mDst) == RegType::Reg)
+          ctx.set_reg_size(si.mDst, 1, 1);
+        SSE::loss_l2_2d_sse_pd(d, arg, val, sz.rs, sz.cs, roundup_col(sz.cs)); break;
       }
       break;
       case InstrType::Trn: {

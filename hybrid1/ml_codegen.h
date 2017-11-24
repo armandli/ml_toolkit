@@ -50,6 +50,7 @@ struct LocalValueNumberHash {
       case InstrType::CELoss:     pr[0] = 23; break;
       case InstrType::CEAccuracy: pr[0] = 24; break;
       case InstrType::Sum:        pr[0] = 25; break;
+      case InstrType::L2Loss:     pr[0] = 26; break;
       //TODO: expand operation here
       default: assert(false);
     }
@@ -83,7 +84,7 @@ void local_value_numbering(SSA& ssa){
           std::swap(recon.mSrc1, recon.mSrc2);
       break;
       // constant value always goes second
-      case InstrType::AddMC: case InstrType::EMulMC:
+      case InstrType::AddMC: case InstrType::EMulMC: case InstrType::L2Loss:
         if (ssa.context.lookup(instr.mSrc1).mType == SSAregType::Scl)
           std::swap(recon.mSrc1, recon.mSrc2);
       break;
@@ -268,7 +269,25 @@ void select_instruction(SSA& ssa){
       }
     }
 
-    void consumeDTanh1(size_t idx){
+    void consumeL2Loss2(size_t idx){
+      if (idx == std::numeric_limits<size_t>::max()) return;
+      const Instr& instr = ssa.instructions[idx];
+      if (instr.mType == InstrType::EMulMC){
+        done[idx] = true;
+        const SSAregData& s1dat = ssa.context.lookup(instr.mSrc1);
+        RegName src1 = segment[0].mSrc1;
+        RegName src2;
+        if (s1dat.mType == SSAregType::Scl)
+          src2 = instr.mSrc1;
+        else
+          src2 = instr.mSrc2;
+        RegName dst = instr.mDst;
+        segment.clear();
+        segment.emplace_back(Instr(InstrType::L2Loss, dst, src1, src2));
+      }
+    }
+
+    void consumeDTanh1L2Loss1(size_t idx){
       if (idx == std::numeric_limits<size_t>::max()) return;
       const Instr& instr = ssa.instructions[idx];
       if (instr.mType == InstrType::SubCM){
@@ -278,6 +297,9 @@ void select_instruction(SSA& ssa){
         if (s1dat.mVal != 1.)
           return;
         consumeDTanh2(next_use(idx), instr.mDst);
+      } else if (instr.mType == InstrType::Sum){
+        done[idx] = true;
+        consumeL2Loss2(next_use(idx));
       }
     }
 
@@ -407,7 +429,7 @@ void select_instruction(SSA& ssa){
         break;
         case InstrType::EMul:
           if (instr.mSrc1 == instr.mSrc2)
-            consumeDTanh1(next_use(idx));
+            consumeDTanh1L2Loss1(next_use(idx));
           else
             consumeDSigmoid1(next_use(idx), idx);
         break;

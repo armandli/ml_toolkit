@@ -398,6 +398,24 @@ std::ostream& operator << (std::ostream& out, const SSA& ssa){
         out << "\n";
       }
       break;
+      case InstrType::L2Loss: {
+        const SSAregData& arg1 = ssa.context.lookup(instr.mSrc1);
+        const SSAregData& arg2 = ssa.context.lookup(instr.mSrc2);
+        out << instr.mDst << " <- "; 
+        switch (arg1.mType){
+          case SSAregType::Scl: out << arg1.mVal; break;
+          case SSAregType::Mtx: out << instr.mSrc1; break;
+          default:              assert(false);
+        }
+        out << " l2 ";
+        switch (arg2.mType){
+          case SSAregType::Scl: out << arg2.mVal; break;
+          case SSAregType::Mtx: out << instr.mSrc1; break;
+          default:              assert(false);
+        }
+        out << "\n";
+      }
+      break;
       case InstrType::EDivMC:
         out << instr.mDst << " <- " << instr.mSrc1 << " / " << ssa.context.lookup(instr.mSrc2).mVal << "\n";
       break;

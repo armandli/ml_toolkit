@@ -83,6 +83,7 @@ enum class InstrType : unsigned {
   DSigmoid,
   DTanh,
   Deriviative,
+  L2Loss,
 };
 
 struct Instr {
@@ -127,6 +128,9 @@ std::ostream& operator << (std::ostream& out, const Instr& instr){
     break;
     case InstrType::GT0MC: case InstrType::GT0CM:
       out << " >0 " << instr.mSrc2;
+    break;
+    case InstrType::L2Loss:
+      out << " l2 " << instr.mSrc2;
     break;
     case InstrType::Mask:
       out << " mask " << instr.mSrc2;

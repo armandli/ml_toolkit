@@ -317,6 +317,10 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
         }
       }
       break;
+      case InstrType::L2Loss: {
+        //TODO
+      }
+      break;
       case InstrType::Trn: {
         double* s1 = find_mem(si.mSrc1);
         double* d  = find_mem(si.mDst);
@@ -346,6 +350,10 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
       break;
       case InstrType::Softmax: {
         //TODO: how to deal with temporary buffer?
+      }
+      break;
+      case InstrType::Sum: {
+        //TODO: also need buffer, and final register has size 1 1
       }
       break;
       case InstrType::CopyTo:
