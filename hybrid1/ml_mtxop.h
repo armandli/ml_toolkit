@@ -88,6 +88,22 @@ void ce_accuracy_2d_mtxop_pd(Dstp dst, Srcp o, Srcp y, size_t rows, size_t cols,
   *dst = (double)count / (double)rows;
 }
 
+void add_cc_1d_mtxop_pd(Dstp dst, double s1, double s2){
+  *dst = s1 + s2;
+}
+
+void sub_cc_1d_mtxop_pd(Dstp dst, double s1, double s2){
+  *dst = s1 - s2;
+}
+
+void emul_cc_1d_mtxop_pd(Dstp dst, double s1, double s2){
+  *dst = s1 * s2;
+}
+
+void ediv_cc_1d_mtxop_pd(Dstp dst, double s1, double s2){
+  *dst = s1 / s2;
+}
+
 } // ML::MTXOP
 
 #endif//ML_MTXOP

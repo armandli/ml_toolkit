@@ -57,6 +57,10 @@ enum class InstrType : unsigned {
   EMulMC,
   EDivMC,
   EDivCM,
+  AddCC,
+  SubCC,
+  EMulCC,
+  EDivCC,
   GT,
   GTMC,
   GTCM,
@@ -114,16 +118,16 @@ std::ostream& operator << (std::ostream& out, const Instr& instr){
   }
   out << instr.mSrc1;
   switch (instr.mType){
-    case InstrType::Add: case InstrType::AddMC:
+    case InstrType::Add: case InstrType::AddMC: case InstrType::AddCC:
       out << " + " << instr.mSrc2;
     break;
-    case InstrType::Sub: case InstrType::SubMC: case InstrType::SubCM:
+    case InstrType::Sub: case InstrType::SubMC: case InstrType::SubCM: case InstrType::SubCC:
       out << " - " << instr.mSrc2;
     break;
-    case InstrType::EMul: case InstrType::EMulMC:
+    case InstrType::EMul: case InstrType::EMulMC: case InstrType::EMulCC:
       out << " * " << instr.mSrc2;
     break;
-    case InstrType::EDiv: case InstrType::EDivMC: case InstrType::EDivCM:
+    case InstrType::EDiv: case InstrType::EDivMC: case InstrType::EDivCM: case InstrType::EDivCC:
       out << " / " << instr.mSrc2;
     break;
     case InstrType::GT: case InstrType::GTMC: case InstrType::GTCM:

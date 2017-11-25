@@ -306,6 +306,31 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         }
       }
       break;
+      case InstrType::AddCC:
+      case InstrType::SubCC:
+      case InstrType::EMulCC:
+      case InstrType::EDivCC: {
+        double s1, s2;
+        if (ctx.type(si.mSrc1) == RegType::Scl)
+          s1 = ctx.lookup_val(si.mSrc1);
+        else
+          s1 = *find_mem(si.mSrc1);
+        if (ctx.type(si.mSrc2) == RegType::Scl)
+          s2 = ctx.lookup_val(si.mSrc2);
+        else
+          s2 = *find_mem(si.mSrc2);
+        double* d = find_mem(si.mDst);
+        if (ctx.type(si.mDst) == RegType::Reg)
+          ctx.set_reg_size(si.mDst, 1, 1);
+        switch (si.mType){
+          case InstrType::AddCC:  MTXOP::add_cc_1d_mtxop_pd(d, s1, s2); break;
+          case InstrType::SubCC:  MTXOP::sub_cc_1d_mtxop_pd(d, s1, s2); break;
+          case InstrType::EMulCC: MTXOP::emul_cc_1d_mtxop_pd(d, s1, s2); break;
+          case InstrType::EDivCC: MTXOP::ediv_cc_1d_mtxop_pd(d, s1, s2); break;
+          default: assert(false);
+        }
+      }
+      break;
       case InstrType::L2Loss: {
         double val = nan("");
         double* arg = nullptr;

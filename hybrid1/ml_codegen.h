@@ -53,6 +53,10 @@ struct LocalValueNumberHash {
       case InstrType::L2Loss:     pr[0] = 26; break;
       case InstrType::Sqrt:       pr[0] = 27; break;
       case InstrType::DSS:        pr[0] = 28; break;
+      case InstrType::AddCC:      pr[0] = 29; break;
+      case InstrType::SubCC:      pr[0] = 30; break;
+      case InstrType::EMulCC:     pr[0] = 31; break;
+      case InstrType::EDivCC:     pr[0] = 32; break;
       //TODO: expand operation here
       default: assert(false);
     }
@@ -81,7 +85,7 @@ void local_value_numbering(SSA& ssa){
 
     switch (recon.mType){
       // ascending register number order
-      case InstrType::Add: case InstrType::EMul:
+      case InstrType::Add: case InstrType::EMul: case InstrType::AddCC: case InstrType::EMulCC:
         if (recon.mSrc2 < recon.mSrc1)
           std::swap(recon.mSrc1, recon.mSrc2);
       break;

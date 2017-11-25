@@ -33,13 +33,13 @@ struct SSAregData {
   SSAregData(const Memory* ref, size_t rows, size_t cols):
     mType(SSAregType::Mtx), mMtxRef(ref), mRows(rows), mCols(cols), mVal(0){}
   explicit SSAregData(double v):
-    mType(SSAregType::Scl), mMtxRef(nullptr), mRows(0), mCols(0), mVal(v){}
+    mType(SSAregType::Scl), mMtxRef(nullptr), mRows(1), mCols(1), mVal(v){}
   SSAregData():
     mType(SSAregType::Nil), mMtxRef(nullptr), mRows(0), mCols(0), mVal(0.){}
 };
 
 class SSAcontext {
-  std::unordered_map<const Memory*, RegName>              mMtxMap;
+  std::unordered_map<const Memory*, RegName>           mMtxMap;
   std::unordered_map<double, RegName>                  mConstMap;
   std::unordered_map<RegName, SSAregData, RegNameHash> mRegData;
   int                                                  mCounter;

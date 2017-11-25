@@ -168,7 +168,9 @@ template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<Add
 
   RegName dst = ret.context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
 
-  if (p1dat.mType == SSAregType::Scl || p2dat.mType == SSAregType::Scl)
+  if (p1dat.mRows == 1 && p1dat.mCols == 1 && p2dat.mRows == 1 && p2dat.mCols == 1)
+    ret.instructions.emplace_back(Instr(InstrType::AddCC, dst, p1, p2));
+  else if ((p1dat.mRows == 1 && p1dat.mCols == 1) || (p2dat.mRows == 1 && p2dat.mCols == 1))
     ret.instructions.emplace_back(Instr(InstrType::AddMC, dst, p1, p2));
   else
     ret.instructions.emplace_back(Instr(InstrType::Add, dst, p1, p2));
@@ -184,9 +186,11 @@ template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<Sub
 
   RegName dst = ret.context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
 
-  if (p1dat.mType == SSAregType::Scl)
+  if (p1dat.mRows == 1 && p1dat.mCols == 1 && p2dat.mRows == 1 && p2dat.mCols == 1)
+    ret.instructions.emplace_back(Instr(InstrType::SubCC, dst, p1, p2));
+  else if (p1dat.mRows == 1 && p1dat.mCols == 1)
     ret.instructions.emplace_back(Instr(InstrType::SubCM, dst, p1, p2));
-  else if (p2dat.mType == SSAregType::Scl)
+  else if (p2dat.mRows == 1 && p2dat.mCols == 1)
     ret.instructions.emplace_back(Instr(InstrType::SubMC, dst, p1, p2));
   else
     ret.instructions.emplace_back(Instr(InstrType::Sub, dst, p1, p2));
@@ -202,7 +206,9 @@ template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<Mul
 
   RegName dst = ret.context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
 
-  if (p1dat.mType == SSAregType::Scl || p2dat.mType == SSAregType::Scl)
+  if (p1dat.mRows == 1 && p1dat.mCols == 1 && p2dat.mRows == 1 && p2dat.mCols == 1)
+    ret.instructions.emplace_back(Instr(InstrType::EMulCC, dst, p1, p2));
+  else if ((p1dat.mRows == 1 && p1dat.mCols == 1) || (p2dat.mRows == 1 && p2dat.mCols == 1))
     ret.instructions.emplace_back(Instr(InstrType::EMulMC, dst, p1, p2));
   else
     ret.instructions.emplace_back(Instr(InstrType::EMul, dst, p1, p2));
@@ -218,9 +224,11 @@ template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<Div
 
   RegName dst = ret.context.gen(nullptr, std::max(p1dat.mRows, p2dat.mRows), std::max(p1dat.mCols, p2dat.mCols));
 
-  if (p1dat.mType == SSAregType::Scl)
+  if (p1dat.mRows == 1 && p1dat.mCols == 1 && p2dat.mRows == 1 && p2dat.mCols == 1)
+    ret.instructions.emplace_back(Instr(InstrType::EDivCC, dst, p1, p2));
+  else if (p1dat.mRows == 1 && p1dat.mCols == 1)
     ret.instructions.emplace_back(Instr(InstrType::EDivCM, dst, p1, p2));
-  else if (p2dat.mType == SSAregType::Scl)
+  else if (p2dat.mRows == 1 && p2dat.mCols == 1)
     ret.instructions.emplace_back(Instr(InstrType::EDivMC, dst, p1, p2));
   else
     ret.instructions.emplace_back(Instr(InstrType::EDiv, dst, p1, p2));
@@ -325,16 +333,16 @@ template <typename X, typename Y> RegName to_ssa(SSA& ret, const MtxBase<Bop<Cro
 std::ostream& operator << (std::ostream& out, const SSA& ssa){
   for (auto& instr : ssa.instructions){
     switch (instr.mType){
-      case InstrType::Add:
+      case InstrType::Add: case InstrType::AddCC:
         out << instr.mDst << " <- " << instr.mSrc1 << " + " << instr.mSrc2 << "\n";
       break;
-      case InstrType::Sub:
+      case InstrType::Sub: case InstrType::SubCC:
         out << instr.mDst << " <- " << instr.mSrc1 << " - " << instr.mSrc2 << "\n";
       break;
-      case InstrType::EMul:
+      case InstrType::EMul: case InstrType::EMulCC:
         out << instr.mDst << " <- " << instr.mSrc1 << " * " << instr.mSrc2 << "\n";
       break;
-      case InstrType::EDiv:
+      case InstrType::EDiv: case InstrType::EDivCC:
         out << instr.mDst << " <- " << instr.mSrc1 << " / " << instr.mSrc2 << "\n";
       break;
       case InstrType::Dot:

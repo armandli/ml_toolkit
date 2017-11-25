@@ -317,6 +317,13 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
         }
       }
       break;
+      case InstrType::AddCC:
+      case InstrType::SubCC:
+      case InstrType::EMulCC:
+      case InstrType::EDivCC: {
+        //TODO
+      }
+      break;
       case InstrType::L2Loss: {
         //TODO
       }
