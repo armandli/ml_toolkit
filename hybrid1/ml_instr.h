@@ -92,6 +92,7 @@ enum class InstrType : unsigned {
   L2Loss,
   DSS,
   MSELoss,
+  MSEAccuracy,
 };
 
 struct Instr {
@@ -154,7 +155,7 @@ std::ostream& operator << (std::ostream& out, const Instr& instr){
     case InstrType::CELoss: case InstrType::MSELoss:
       out << " loss " << instr.mSrc2;
     break;
-    case InstrType::CEAccuracy:
+    case InstrType::CEAccuracy: case InstrType::MSEAccuracy:
       out << " accuracy " << instr.mSrc2;
     break;
     case InstrType::DSigmoid:

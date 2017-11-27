@@ -59,6 +59,7 @@ struct LocalValueNumberHash {
       case InstrType::EDivCC:     pr[0] = 32; break;
       case InstrType::MSELoss:    pr[0] = 33; break;
       case InstrType::SqrtC:      pr[0] = 34; break;
+      case InstrType::MSEAccuracy:pr[0] = 35; break;
       //TODO: expand operation here
       default: assert(false);
     }
@@ -99,7 +100,7 @@ void local_value_numbering(SSA& ssa){
       // cases where order does matter
       case InstrType::Sub: case InstrType::EDiv: case InstrType::Dot: case InstrType::GT: case InstrType::Mask:
       case InstrType::DRelu: case InstrType::CELoss: case InstrType::CEAccuracy: case InstrType::DSS:
-      case InstrType::MSELoss:
+      case InstrType::MSELoss: case InstrType::MSEAccuracy:
       case InstrType::SubMC: case InstrType::SubCM: case InstrType::EDivMC: case InstrType::EDivCM:
       case InstrType::GTMC: case InstrType::GTCM: case InstrType::GT0MC: case InstrType::GT0CM:
       case InstrType::Trn: case InstrType::Not: case InstrType::Tanh: case InstrType::Softmax:
@@ -409,13 +410,79 @@ void select_instruction(SSA& ssa){
       //TODO: alternative way of evaluating isnan
     }
 
-    bool consumeMSELoss1(size_t idx){
+    //TODO: MSE Accuracy algebra is fairly complicated with many possible
+    //  forms, we're just dealing with the form that I keep using to make
+    //  this simple
+    bool consumeMSEAccuracy4(size_t idx){
+      if (idx == std::numeric_limits<size_t>::max()) return false;
+      const Instr& instr = ssa.instructions[idx];
+      if (instr.mType == InstrType::EMulCC){
+        const SSAregData& s1dat = ssa.context.lookup(instr.mSrc1);
+        const SSAregData& s2dat = ssa.context.lookup(instr.mSrc2);
+        if (not ((s1dat.mType == SSAregType::Scl && s1dat.mVal == 0.5) ||
+                 (s2dat.mType == SSAregType::Scl && s2dat.mVal == 0.5)))
+          return false;
+        done[idx] = true;
+        RegName src1 = segment[0].mSrc1;
+        RegName src2 = segment[0].mSrc2;
+        RegName dst = instr.mDst;
+        segment.clear();
+        segment.emplace_back(Instr(InstrType::MSEAccuracy, dst, src1, src2));
+        return true;
+      }
+      return false;
+    }
+
+    bool consumeMSEAccuracy3(size_t idx){
       if (idx == std::numeric_limits<size_t>::max()) return false;
       const Instr& instr = ssa.instructions[idx];
       if (instr.mType == InstrType::EDivCC){
         const SSAregData& s2dat = ssa.context.lookup(instr.mSrc2);
         const SSAregData& p1dat = ssa.context.lookup(segment[0].mSrc1);
-        if (p1dat.mRows != s2dat.mVal) return false;
+        if (s2dat.mType != SSAregType::Scl || p1dat.mRows != s2dat.mVal) return false;
+        done[idx] = true;
+        RegName src1 = segment[0].mSrc1;
+        RegName src2 = segment[0].mSrc2;
+        RegName dst = instr.mDst;
+        segment.clear();
+        segment.emplace_back(Instr(InstrType::MSEAccuracy, dst, src1, src2));
+        return true;
+      }
+      return false;
+    }
+
+    bool consumeMSEAccuracy2(size_t idx){
+      if (idx == std::numeric_limits<size_t>::max()) return false;
+      const Instr& instr = ssa.instructions[idx];
+      if (instr.mType == InstrType::EMulCC){
+        const SSAregData& s1dat = ssa.context.lookup(instr.mSrc1);
+        const SSAregData& s2dat = ssa.context.lookup(instr.mSrc2);
+        if (not ((s1dat.mType == SSAregType::Scl && s1dat.mVal == 0.5) ||
+                 (s2dat.mType == SSAregType::Scl && s2dat.mVal == 0.5)))
+          return false;
+        if (consumeMSEAccuracy3(next_use(idx))){
+          done[idx] = true;
+          return true;
+        }
+      } else if (instr.mType == InstrType::EDivCC){
+        const SSAregData& s2dat = ssa.context.lookup(instr.mSrc2);
+        const SSAregData& p1dat = ssa.context.lookup(segment[0].mSrc1);
+        if (s2dat.mType != SSAregType::Scl || p1dat.mRows != s2dat.mVal) return false;
+        if (consumeMSEAccuracy4(next_use(idx))){
+          done[idx] = true;
+          return true;
+        }
+      }
+      return false;
+    }
+
+    bool consumeMSELoss1MSEAccuracy1(size_t idx){
+      if (idx == std::numeric_limits<size_t>::max()) return false;
+      const Instr& instr = ssa.instructions[idx];
+      if (instr.mType == InstrType::EDivCC){
+        const SSAregData& s2dat = ssa.context.lookup(instr.mSrc2);
+        const SSAregData& p1dat = ssa.context.lookup(segment[0].mSrc1);
+        if (s2dat.mType != SSAregType::Scl || p1dat.mRows != s2dat.mVal) return false;
 
         done[idx] = true;
         RegName src1 = segment[0].mSrc1;
@@ -424,6 +491,11 @@ void select_instruction(SSA& ssa){
         segment.clear();
         segment.emplace_back(Instr(InstrType::MSELoss, dst, src1, src2));
         return true;
+      } else if (instr.mType == InstrType::SqrtC){
+        if (consumeMSEAccuracy2(next_use(idx))){
+          done[idx] = true;
+          return true;
+        }
       }
       return false;
     }
@@ -434,7 +506,7 @@ void select_instruction(SSA& ssa){
       if (instr.mType == InstrType::Sum){
         done[idx] = true;
 
-        if (consumeMSELoss1(next_use(idx))) return true;
+        if (consumeMSELoss1MSEAccuracy1(next_use(idx))) return true;
 
         RegName src1 = segment[0].mSrc1;
         RegName src2 = segment[0].mSrc2;

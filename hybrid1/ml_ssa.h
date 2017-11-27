@@ -364,7 +364,7 @@ std::ostream& operator << (std::ostream& out, const SSA& ssa){
       case InstrType::CELoss: case InstrType::MSELoss:
         out << instr.mDst << " <- " << instr.mSrc1 << " loss " << instr.mSrc2 << "\n";
       break;
-      case InstrType::CEAccuracy:
+      case InstrType::CEAccuracy: case InstrType::MSEAccuracy:
         out << instr.mDst << " <- " << instr.mSrc1 << " accuracy " << instr.mSrc2 << "\n";
       break;
       case InstrType::DSigmoid:
