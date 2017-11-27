@@ -79,6 +79,7 @@ enum class InstrType : unsigned {
   Sum,
   CELoss,
   CEAccuracy,
+  SqrtC,
   //TODO: expand operation here
   //Following Instruction only applies to GPU side
   CopyTo,
@@ -90,6 +91,7 @@ enum class InstrType : unsigned {
   Deriviative,
   L2Loss,
   DSS,
+  MSELoss,
 };
 
 struct Instr {
@@ -113,6 +115,7 @@ std::ostream& operator << (std::ostream& out, const Instr& instr){
     case InstrType::Isnan0: out << "isnan0("; break;
     case InstrType::Sigmoid:out << "sigmoid("; break;
     case InstrType::Sqrt:   out << "sqrt("; break;
+    case InstrType::SqrtC:  out << "sqrtc("; break;
     case InstrType::Sum:    out << "sum("; break;
     default:;
   }
@@ -148,7 +151,7 @@ std::ostream& operator << (std::ostream& out, const Instr& instr){
     case InstrType::Dot:
       out << " ^ " << instr.mSrc2;
     break;
-    case InstrType::CELoss:
+    case InstrType::CELoss: case InstrType::MSELoss:
       out << " loss " << instr.mSrc2;
     break;
     case InstrType::CEAccuracy:
@@ -167,7 +170,7 @@ std::ostream& operator << (std::ostream& out, const Instr& instr){
       /* DO NOTHING */
     break;
     case InstrType::Exp: case InstrType::Isnan: case InstrType::Isnan0: case InstrType::Sigmoid:
-    case InstrType::Sum: case InstrType::Sqrt:
+    case InstrType::Sum: case InstrType::Sqrt: case InstrType::SqrtC:
       out << ")";
     break;
     //TODO: expand operation here

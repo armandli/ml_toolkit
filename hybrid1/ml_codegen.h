@@ -57,6 +57,8 @@ struct LocalValueNumberHash {
       case InstrType::SubCC:      pr[0] = 30; break;
       case InstrType::EMulCC:     pr[0] = 31; break;
       case InstrType::EDivCC:     pr[0] = 32; break;
+      case InstrType::MSELoss:    pr[0] = 33; break;
+      case InstrType::SqrtC:      pr[0] = 34; break;
       //TODO: expand operation here
       default: assert(false);
     }
@@ -97,11 +99,12 @@ void local_value_numbering(SSA& ssa){
       // cases where order does matter
       case InstrType::Sub: case InstrType::EDiv: case InstrType::Dot: case InstrType::GT: case InstrType::Mask:
       case InstrType::DRelu: case InstrType::CELoss: case InstrType::CEAccuracy: case InstrType::DSS:
+      case InstrType::MSELoss:
       case InstrType::SubMC: case InstrType::SubCM: case InstrType::EDivMC: case InstrType::EDivCM:
       case InstrType::GTMC: case InstrType::GTCM: case InstrType::GT0MC: case InstrType::GT0CM:
       case InstrType::Trn: case InstrType::Not: case InstrType::Tanh: case InstrType::Softmax:
       case InstrType::Exp: case InstrType::Isnan: case InstrType::Isnan0: case InstrType::Sum:
-      case InstrType::Sqrt:
+      case InstrType::Sqrt: case InstrType::SqrtC:
         /* DO NOTHING */
       break;
       //TODO: expand operation here
@@ -406,11 +409,33 @@ void select_instruction(SSA& ssa){
       //TODO: alternative way of evaluating isnan
     }
 
+    bool consumeMSELoss1(size_t idx){
+      if (idx == std::numeric_limits<size_t>::max()) return false;
+      const Instr& instr = ssa.instructions[idx];
+      if (instr.mType == InstrType::EDivCC){
+        const SSAregData& s2dat = ssa.context.lookup(instr.mSrc2);
+        const SSAregData& p1dat = ssa.context.lookup(segment[0].mSrc1);
+        if (p1dat.mRows != s2dat.mVal) return false;
+
+        done[idx] = true;
+        RegName src1 = segment[0].mSrc1;
+        RegName src2 = segment[0].mSrc2;
+        RegName dst = instr.mDst;
+        segment.clear();
+        segment.emplace_back(Instr(InstrType::MSELoss, dst, src1, src2));
+        return true;
+      }
+      return false;
+    }
+
     bool consumeDSS2(size_t idx){
       if (idx == std::numeric_limits<size_t>::max()) return false;
       const Instr& instr = ssa.instructions[idx];
       if (instr.mType == InstrType::Sum){
         done[idx] = true;
+
+        if (consumeMSELoss1(next_use(idx))) return true;
+
         RegName src1 = segment[0].mSrc1;
         RegName src2 = segment[0].mSrc2;
         RegName dst = instr.mDst;
@@ -634,7 +659,6 @@ void release_ssa(InstrContext& ctx){
     ComputeMtxCommunicator::clear_ssa(*pm);
   }
 }
-
 
 } //ML
 

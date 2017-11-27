@@ -363,6 +363,10 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
         //TODO: also need buffer, and final register has size 1 1
       }
       break;
+      case InstrType::SqrtC: {
+        //TODO
+      }
+      break;
       case InstrType::CopyTo:
       case InstrType::CopyFrom: {
         double* s1 = find_mem(si.mSrc1);

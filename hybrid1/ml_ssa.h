@@ -147,7 +147,11 @@ template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<SqrtOp, X>>& ex
   const SSAregData& p1dat = ret.context.lookup(p1);
   RegName p2 = ret.context.gen();
   RegName dst = ret.context.gen(nullptr, p1dat.mRows, p1dat.mCols);
-  ret.instructions.emplace_back(Instr(InstrType::Sqrt, dst, p1, p2));
+
+  if (p1dat.mRows == 1 && p1dat.mCols == 1)
+    ret.instructions.emplace_back(Instr(InstrType::SqrtC, dst, p1, p2));
+  else
+    ret.instructions.emplace_back(Instr(InstrType::Sqrt, dst, p1, p2));
   return dst;
 }
 template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<SumOp, X>>& expr){
@@ -357,7 +361,7 @@ std::ostream& operator << (std::ostream& out, const SSA& ssa){
       case InstrType::DRelu:
         out << instr.mDst << " <- " << instr.mSrc1 << " drelu " << instr.mSrc2 << "\n";
       break;
-      case InstrType::CELoss:
+      case InstrType::CELoss: case InstrType::MSELoss:
         out << instr.mDst << " <- " << instr.mSrc1 << " loss " << instr.mSrc2 << "\n";
       break;
       case InstrType::CEAccuracy:
@@ -479,6 +483,9 @@ std::ostream& operator << (std::ostream& out, const SSA& ssa){
       break;
       case InstrType::Sqrt:
         out << instr.mDst << " <- sqrt(" << instr.mSrc1 << ")\n";
+      break;
+      case InstrType::SqrtC:
+        out << instr.mDst << " <- sqrtc(" << instr.mSrc1 << ")\n";
       break;
       case InstrType::Sum:
         out << instr.mDst << " <- sum(" << instr.mSrc1 << ")\n";

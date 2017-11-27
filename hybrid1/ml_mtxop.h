@@ -104,6 +104,10 @@ void ediv_cc_1d_mtxop_pd(Dstp dst, double s1, double s2){
   *dst = s1 / s2;
 }
 
+void sqrt_c_1d_mtxop_pd(Dstp dst, double src){
+  *dst = std::sqrt(src);
+}
+
 } // ML::MTXOP
 
 #endif//ML_MTXOP

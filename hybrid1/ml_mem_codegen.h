@@ -176,7 +176,8 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
       case InstrType::DSigmoid:
       case InstrType::DTanh:
       case InstrType::Deriviative:
-      case InstrType::DSS: {
+      case InstrType::DSS:
+      case InstrType::MSELoss: {
         double* s1 = find_mem(si.mSrc1);
         double* s2 = find_mem(si.mSrc2);
         double* d  = find_mem(si.mDst);
@@ -197,6 +198,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
           case InstrType::DTanh:       SSE::dtanh_1d_sse_pd(d, s1, s2, s1size.rs, roundup_col(s1size.cs)); break;
           case InstrType::Deriviative: SSE::deriviative_row_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
           case InstrType::DSS:         SSE::diff_square_sum_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
+          case InstrType::MSELoss:     SSE::mse_loss_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
           default: assert(false);
         }
       }
@@ -399,6 +401,18 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         if (ctx.type(si.mDst) == RegType::Reg)
           ctx.set_reg_size(si.mDst, 1, 1);
         SSE::sum_all_2d_sse_pd(d, s1, sz.rs, sz.cs, roundup_col(sz.cs));
+      }
+      break;
+      case InstrType::SqrtC: {
+        double src;
+        if (ctx.type(si.mSrc1) == RegType::Scl)
+          src = ctx.lookup_val(si.mSrc1);
+        else
+          src = *find_mem(si.mSrc1);
+        double* d = find_mem(si.mDst);
+        if (ctx.type(si.mDst) == RegType::Reg)
+          ctx.set_reg_size(si.mDst, 1, 1);
+        MTXOP::sqrt_c_1d_mtxop_pd(d, src);
       }
       break;
       //TODO: expand operation here
