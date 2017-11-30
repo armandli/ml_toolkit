@@ -83,12 +83,25 @@ class Mtx: public Memory {
 
   friend class SSAMtxCommunicator;
 public:
+  //should not use these functions
+  Mtx(const Mtx&): Memory(nullptr) { assert(false); }
+  Mtx& operator=(const Mtx&){ assert(false); }
+
   Mtx(): Memory(nullptr), mRowStride(0), mColStride(0) {}
   Mtx(size_t r, size_t c, double v = 0.):
     Memory(nullptr, r, c), mRowStride(roundup_row(r)), mColStride(roundup_col(c)) {
     set_data(new double[mRowStride * mColStride]);
     if (v == 0.) memset(data(), 0, sizeof(double) * mRowStride * mColStride);
     else         SSE::const_init_1d_sse_pd(data(), v, rows(), mColStride);
+  }
+  Mtx(size_t r, size_t c, const std::vector<double>& v):
+    Memory(nullptr, r, c), mRowStride(roundup_row(r)), mColStride(roundup_col(c)) {
+    assert(v.size() >= r * c);
+    set_data(new double[mRowStride * mColStride]);
+    //TODO: use SSE instructions to do this
+    for (size_t ir = 0, k = 0; ir < r; ++ir, ++k)
+      for (size_t ic = 0; ic < c; ++ic)
+        data()[ir * mColStride + ic] = v[k];
   }
   Mtx(size_t r, size_t c, RandomizationType rtype, double p1, double p2):
     Memory(nullptr, r, c), mRowStride(roundup_row(r)), mColStride(roundup_col(c)) {
@@ -99,10 +112,10 @@ public:
       default: assert(false);
     }
   }
-  Mtx(std::istream& in): Memory(nullptr) {
+  explicit Mtx(std::istream& in): Memory(nullptr) {
     load(in);
   }
-  Mtx(const char* filename): Memory(nullptr) {
+  explicit Mtx(const char* filename): Memory(nullptr) {
     std::ifstream in(filename, std::ifstream::in);
     assert(in.good());
     load(in);
@@ -111,7 +124,6 @@ public:
   template <typename CRTP>
   Mtx(MtxBase<CRTP>&& expr):
     Memory(nullptr), mRowStride(0), mColStride(0) {
-    //to_ssa is friend, and modifies this matrix's data
     ssa() = to_ssa(expr, *this);
   }
 
@@ -121,6 +133,15 @@ public:
   Mtx& operator=(MtxBase<CRTP>&& expr){
     ssa() = to_ssa(expr, *this);
     return *this;
+  }
+
+  //TODO: is this even something that's good?
+  void init(size_t r, size_t c){
+    set_rows(r);
+    set_cols(c);
+    mRowStride = roundup_row(r);
+    mColStride = roundup_col(c);
+    set_data(new double[mRowStride * mColStride]);
   }
 
   void evaluate(MemArena& arena){
@@ -147,6 +168,15 @@ public:
     return D2Idx(data(), i, j, mRowStride, mColStride);
   }
 };
+
+std::ostream& operator << (std::ostream& out, const Mtx& m){
+  for (size_t ir = 0; ir < m.rows(); ++ir){
+    for (size_t ic = 0; ic < m.cols(); ++ic)
+      out << m(ir, ic) << " ";
+    out << "\n";
+  }
+  return out;
+}
 
 class ReductionResult: public Memory {
   double mVal;

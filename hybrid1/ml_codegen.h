@@ -100,7 +100,7 @@ void local_value_numbering(SSA& ssa){
       // cases where order does matter
       case InstrType::Sub: case InstrType::EDiv: case InstrType::Dot: case InstrType::GT: case InstrType::Mask:
       case InstrType::DRelu: case InstrType::CELoss: case InstrType::CEAccuracy: case InstrType::DSS:
-      case InstrType::MSELoss: case InstrType::MSEAccuracy:
+      case InstrType::SubCC: case InstrType::EDivCC: case InstrType::MSELoss: case InstrType::MSEAccuracy:
       case InstrType::SubMC: case InstrType::SubCM: case InstrType::EDivMC: case InstrType::EDivCM:
       case InstrType::GTMC: case InstrType::GTCM: case InstrType::GT0MC: case InstrType::GT0CM:
       case InstrType::Trn: case InstrType::Not: case InstrType::Tanh: case InstrType::Softmax:
@@ -185,6 +185,10 @@ std::vector<LiveSet> analyze_liveness(SSA& ssa){
 }
 
 //TODO: write an automatic tool for instruction selection based on pattern matching
+
+//TODO: the instruction selector algorithm is severely flawed. there are many possible mathematical 
+//  identities that can be discovered and transformed to make more optimal instructions. need to 
+//  research into this.
 
 // At this point we can only have hand coded pattern matcher
 //benefit:
@@ -280,22 +284,43 @@ void select_instruction(SSA& ssa){
       }
     }
 
-    void consumeL2Loss2(size_t idx){
-      if (idx == std::numeric_limits<size_t>::max()) return;
+    bool consumeL2Loss3(size_t idx){
+      if (idx == std::numeric_limits<size_t>::max()) return false;
       const Instr& instr = ssa.instructions[idx];
-      if (instr.mType == InstrType::EMulMC){
+      if (instr.mType == InstrType::EMulCC){
         done[idx] = true;
-        const SSAregData& s1dat = ssa.context.lookup(instr.mSrc1);
         RegName src1 = segment[0].mSrc1;
         RegName src2;
-        if (s1dat.mType == SSAregType::Scl)
-          src2 = instr.mSrc1;
-        else
+        if (instr.mSrc1 == segment[1].mDst)
           src2 = instr.mSrc2;
+        else
+          src2 = instr.mSrc1;
         RegName dst = instr.mDst;
         segment.clear();
         segment.emplace_back(Instr(InstrType::L2Loss, dst, src1, src2));
+        return true;
       }
+      return false;
+    }
+
+    bool consumeL2Loss2(size_t idx){
+      if (idx == std::numeric_limits<size_t>::max()) return false;
+      const Instr& instr = ssa.instructions[idx];
+      if (instr.mType == InstrType::EMulCC){
+        const SSAregData& s1dat = ssa.context.lookup(instr.mSrc1);
+        const SSAregData& s2dat = ssa.context.lookup(instr.mSrc2);
+        if (not ((s1dat.mType == SSAregType::Scl && s1dat.mVal == 0.5) ||
+                 (s2dat.mType == SSAregType::Scl && s2dat.mVal == 0.5)))
+          return false;
+        segment.push_back(instr);
+        if (consumeL2Loss3(next_use(idx))){
+          done[idx] = true;
+          return true;
+        }
+        segment.pop_back();
+        return false;
+      }
+      return false;
     }
 
     void consumeDTanh1L2Loss1(size_t idx){
@@ -309,8 +334,8 @@ void select_instruction(SSA& ssa){
           return;
         consumeDTanh2(next_use(idx), instr.mDst);
       } else if (instr.mType == InstrType::Sum){
-        done[idx] = true;
-        consumeL2Loss2(next_use(idx));
+        if (consumeL2Loss2(next_use(idx)))
+          done[idx] = true;
       }
     }
 

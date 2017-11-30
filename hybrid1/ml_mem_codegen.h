@@ -425,21 +425,21 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
 
 void memvaluateSSA(SSA& ssa, MemArena& arena){
   //GOTHERE
-  std::cout << "Before Optimization: " << std::endl;
-  std::cout << ssa;
+//  std::cout << "Before Optimization: " << std::endl;
+//  std::cout << ssa;
 
   //TODO: optimize given SSA: dead code elimination etc
   local_value_numbering(ssa);
 
   //GOTHERE
-  std::cout << "After Local Value Numbering: " << std::endl;
-  std::cout << ssa;
+//  std::cout << "After Local Value Numbering: " << std::endl;
+//  std::cout << ssa;
 
   select_instruction(ssa);
 
   //GOTHERE
-  std::cout << "After Peephole Optimization: " << std::endl;
-  std::cout << ssa;
+//  std::cout << "After Peephole Optimization: " << std::endl;
+//  std::cout << ssa;
 
   RegSize regsize = estimate_register_size(ssa);
   std::vector<LiveSet> liveness = analyze_liveness(ssa);

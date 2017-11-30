@@ -156,7 +156,6 @@ template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<SqrtOp, X>>& ex
 }
 template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<SumOp, X>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Uop<SumOp, X>&>(expr).param());
-  const SSAregData& p1dat = ret.context.lookup(p1);
   RegName p2 = ret.context.gen();
   RegName dst = ret.context.gen(nullptr, 1, 1);
   ret.instructions.emplace_back(Instr(InstrType::Sum, dst, p1, p2));
@@ -511,7 +510,6 @@ template <typename CRTP>
 SSA to_ssa(const MtxBase<CRTP>& expr, ReductionResult& dst){
   SSA ret;
   RegName dname = to_ssa(ret, expr);
-  const SSAregData& ddat = ret.context.lookup(dname);
   ret.context.associate(dname, dst);
   return ret;
 }

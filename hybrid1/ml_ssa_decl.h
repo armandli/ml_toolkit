@@ -145,6 +145,13 @@ struct SSA {
   }
 };
 
+template <typename CRTP> class MtxBase;
+class Mtx;
+class ReductionResult;
+
+template <typename CRTP> SSA to_ssa(const MtxBase<CRTP>&, Mtx&);
+template <typename CRTP> SSA to_ssa(const MtxBase<CRTP>&, ReductionResult&);
+
 void memvaluateSSA(SSA&, MemArena&);
 
 } //ML
