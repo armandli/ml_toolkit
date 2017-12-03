@@ -21,7 +21,7 @@ class Memory {
   size_t  mCols;
   mutable SSA mSSA;
 
-  friend class ComputeMtxCommunicator;
+  friend struct ComputeMtxCommunicator;
 protected:
   double* data() const { return mData; }
   void set_data(double* data){ mData = data; }
@@ -81,7 +81,7 @@ class Mtx: public Memory {
     in.read((char*)data(), sizeof(double) * mRowStride * mColStride);
   }
 
-  friend class SSAMtxCommunicator;
+  friend struct SSAMtxCommunicator;
 public:
   //should not use these functions
   Mtx(const Mtx&): Memory(nullptr) { assert(false); }

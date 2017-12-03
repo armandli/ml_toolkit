@@ -51,7 +51,7 @@ TEST(SSE, ConstInitBlock){
   delete[] expected2;
 }
 
-TEST(SSE, TransposeBlock){
+TEST(SSE, TransposeBlock1){
   double* buffer1 = new double[MTX_BLOCK_RSZ * 8 * 8];
   double* buffer2 = new double[MTX_BLOCK_RSZ * 3 * 4];
   double* buffer3 = new double[MTX_BLOCK_RSZ * 4 * 3];
@@ -75,9 +75,9 @@ TEST(SSE, TransposeBlock){
     expected3[i] = (double)i;
   }
 
-  transpose4x4_2d_sse_pd(dst1, buffer1, 16, 16);
-  transpose4x4_2d_sse_pd(dst2, buffer2, 4, 12);
-  transpose4x4_2d_sse_pd(dst3, buffer3, 12, 4);
+  transpose4x4_2d_sse_pd(dst1, buffer1, 16, 16, 16, 16);
+  transpose4x4_2d_sse_pd(dst2, buffer2, 12, 4, 12, 4);
+  transpose4x4_2d_sse_pd(dst3, buffer3, 4, 12, 4, 12);
 
   for (size_t i = 0; i < 16; ++i)
     for (size_t j = 0; j < 16; ++j)
@@ -104,6 +104,41 @@ TEST(SSE, TransposeBlock){
   delete[] buffer3;
   delete[] dst3;
   delete[] expected3;
+}
+
+TEST(SSE, TransposeBlock2){
+  double* buffer1 = new double[52 * 32];
+  double* dst1 = new double[32 * 64];
+  double* expected1 = new double[32 * 64];
+  for (size_t i = 0; i < 52 * 32; ++i)
+    buffer1[i] = i;
+  for (size_t ir = 0; ir < 32; ++ir)
+    for (size_t ic = 0; ic < 52; ++ic)
+      expected1[ir * 64 + ic] = buffer1[ic * 32 + ir];
+
+  transpose4x4_2d_sse_pd(dst1, buffer1, 32, 52, 32, 64);
+
+  for (size_t ir = 0; ir < 32; ++ir)
+    for (size_t ic = 0; ic < 52; ++ic)
+      EXPECT_DOUBLE_EQ(dst1[ir * 64 + ic], expected1[ir * 64 + ic]);
+}
+
+TEST(SSE, TransposeBlock3){
+  double* buffer1 = new double[52 * 32]; //50 * 4
+  double* dst1 = new double[4 * 64];     //4  * 50
+  double* expected1 = new double[32 * 64];
+  for (size_t ir = 0; ir < 50; ++ir)
+    for (size_t ic = 0; ic < 4; ++ic)
+      buffer1[ir * 32 + ic] = ir * 4 + ic;
+  for (size_t ir = 0; ir < 50; ++ir)
+    for (size_t ic = 0; ic < 4; ++ic)
+      expected1[ic * 64 + ir] = buffer1[ir * 32 + ic];
+
+  transpose4x4_2d_sse_pd(dst1, buffer1, 4, 52, 32, 64);
+
+  for (size_t ir = 0; ir < 4; ++ir)
+    for (size_t ic = 0; ic < 50; ++ic)
+      EXPECT_DOUBLE_EQ(expected1[ir * 64 + ic], dst1[ir * 64 + ic]);
 }
 
 struct SSESimpleOperation : testing::Test {

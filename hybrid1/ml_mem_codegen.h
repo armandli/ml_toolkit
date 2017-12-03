@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <queue>
 
+#include <cblas.h>
+
 #include <ml_instr.h>
 #include <ml_ssa_decl.h>
 #include <ml_codegen.h>
@@ -363,7 +365,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         assert(s1size.rs > 0 && s1size.cs > 0);
         if (ctx.type(si.mDst) == RegType::Reg)
           ctx.set_reg_size(si.mDst, s1size.cs, s1size.rs);
-        SSE::transpose4x4_2d_sse_pd(d, s1, roundup_row(s1size.rs), roundup_col(s1size.cs));
+        SSE::transpose4x4_2d_sse_pd(d, s1, roundup_row(s1size.cs), roundup_row(s1size.rs), roundup_col(s1size.cs), roundup_col(s1size.rs));
       }
       break;
       case InstrType::Tanh:

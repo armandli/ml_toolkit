@@ -145,7 +145,7 @@ struct SSA {
   }
 };
 
-template <typename CRTP> class MtxBase;
+template <typename CRTP> struct MtxBase;
 class Mtx;
 class ReductionResult;
 

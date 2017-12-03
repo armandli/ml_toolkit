@@ -31,7 +31,8 @@ bool operator < (RegName a, RegName b){
   else         return false;
 }
 std::ostream& operator << (std::ostream& out, const RegName& name){
-  out << name.name[0] << name.name[1] << name.name[2] << name.name[3];
+  for (size_t i = 0; i < 4 && name.name[i] != 0; ++i)
+    out << name.name[i];
   return out;
 }
 

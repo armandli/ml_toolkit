@@ -202,6 +202,7 @@ __global__ void transpose_2d_cukernel_pd(double* __restrict__ dst, const double*
   dst[ gcol * lcolsize * rowsize + grow * lrowsize + dstlrow * rowsize + dstlcol ] = sm[lrow * lcolsize + lcol + SPPL::cuda_cf_offset(lrow * lcolsize + lcol)];
 }
 
+//TODO: check if this is going to work for boundary cases where memory size for source and destination are very different. e.g. transpose a matrix of 50 * 4
 void transpose_2d_cuda_pd(double* __restrict__ dst, const double* __restrict__ src, size_t rowstride, size_t colstride){
   BlkSz bs = get_gpu_block_size(rowstride, colstride);
   dim3 tpb(bs.cpb, bs.rpb);

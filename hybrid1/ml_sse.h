@@ -146,10 +146,10 @@ void const_init_2d_sse_pd(Dstp dst, double v, size_t rows, size_t cols, size_t r
       _mm256_storeu_pd(&dst[ir * colstride + ic], v256);
 }
 
-void transpose4x4_2d_sse_pd(double* __restrict__ const dst, const double* __restrict__ const src, size_t rowstride, size_t colstride){
+void transpose4x4_2d_sse_pd(double* __restrict__ const dst, const double* __restrict__ const src, size_t mincols, size_t rowstride, size_t colstride, size_t dcolstride){
   for (size_t i = 0; i < rowstride; i += MTX_BLOCK_RSZ)
-    for (size_t j = 0; j < colstride; j += MTX_BLOCK_RSZ){
-      double* d = &dst[j * rowstride + i];
+    for (size_t j = 0; j < mincols; j += MTX_BLOCK_RSZ){
+      double* d = &dst[j * dcolstride + i];
       const double* s = &src[i * colstride + j];
 
       __m256d r1 = _mm256_loadu_pd(&s[colstride * 0]);
@@ -167,10 +167,10 @@ void transpose4x4_2d_sse_pd(double* __restrict__ const dst, const double* __rest
       __m256d p3 = _mm256_permute2f128_pd(t1, t3, 0x31);
       __m256d p4 = _mm256_permute2f128_pd(t2, t4, 0x31);
     
-      _mm256_storeu_pd(&d[rowstride * 0], p1);
-      _mm256_storeu_pd(&d[rowstride * 1], p2);
-      _mm256_storeu_pd(&d[rowstride * 2], p3);
-      _mm256_storeu_pd(&d[rowstride * 3], p4);
+      _mm256_storeu_pd(&d[dcolstride * 0], p1);
+      _mm256_storeu_pd(&d[dcolstride * 1], p2);
+      _mm256_storeu_pd(&d[dcolstride * 2], p3);
+      _mm256_storeu_pd(&d[dcolstride * 3], p4);
     }
 }
 

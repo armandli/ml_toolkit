@@ -7,8 +7,6 @@
 #include <algorithm>
 #include <ostream>
 
-#include <cblas.h>
-
 #include <ml_common.h>
 #include <ml_exprtree.h>
 #include <ml_instr.h>
@@ -502,6 +500,7 @@ SSA to_ssa(const MtxBase<CRTP>& expr, Mtx& dst){
   RegName dname = to_ssa(ret, expr);
   const SSAregData& ddat = ret.context.lookup(dname);
   SSAMtxCommunicator::reset_mtx_size(dst, ddat);
+  //TODO: BUG!!! what if last operation is matrix multiply, and one of the source matrix is also the final matrix?
   ret.context.associate(dname, dst);
   return ret;
 }

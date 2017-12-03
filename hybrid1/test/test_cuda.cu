@@ -427,6 +427,55 @@ TEST_F(TransposeTest, TransposeTest9){
   EXPECT_TRUE(0 == memcmp(memblockref, memblockdst, sizeof(double) * rsz * csz));
 }
 
+struct TransposeTest2 : testing::Test {
+  void init_block(double* b, size_t r, size_t c, size_t cs){
+    for (size_t i = 0; i < r; ++i)
+      for (size_t j = 0; j < c; ++j)
+        b[i * cs + j] = i * c + j;
+  }
+  void transpose_cpu(double* __restrict__ dst, const double* __restrict__ src, size_t r, size_t c, size_t scs, size_t dcs){
+    for (size_t i = 0; i < r; ++i)
+      for (size_t j = 0; j < c; ++j)
+        dst[j * dcs + i] = src[i * scs + j];
+  }
+
+  TransposeTest2(){}
+  ~TransposeTest2(){
+    CUDADBG(cudaFree(devblock));
+    CUDADBG(cudaFree(devblockdst));
+
+    delete[] memblock;
+    delete[] memblockref;
+    delete[] memblockdst;
+  }
+
+  doubleptr memblock, devblock, memblockref, devblockdst, memblockdst;
+  size_t srs, scs, drs, dcs;
+};
+
+TEST_F(TransposeTest2, TransposeTest1){
+  srs = 50, scs = 4, drs = 4, dcs = 50;
+  size_t srs_stride = ML::roundup_row(srs), scs_stride = ML::roundup_col(scs),
+         drs_stride = ML::roundup_row(drs), dcs_stride = ML::roundup_col(dcs);
+
+  CUDADBG(cudaMalloc(&devblock, sizeof(double) * srs_stride * scs_stride));
+  CUDADBG(cudaMalloc(&devblockdst, sizeof(double) * drs_stride * dcs_stride));
+
+  memblock = new double[srs_stride * drs_stride];
+  memblockdst = new double[drs_stride * dcs_stride];
+  memblockref = new double[drs_stride * dcs_stride];
+  init_block(memblock, srs, scs, scs_stride);
+  CUDADBG(cudaMemcpy(devblock, memblock, sizeof(double) * srs_stride * scs_stride, cudaMemcpyHostToDevice));
+  transpose_cpu(memblockref, memblock, srs, scs, scs_stride, dcs_stride);
+
+  transpose_2d_cuda_pd(devblockdst, devblock, srs_stride, scs_stride); //TODO
+  CUDADBG(cudaMemcpy(memblockdst, devblockdst, sizeof(double) * drs_stride * dcs_stride, cudaMemcpyDeviceToHost));
+
+  for (size_t ir = 0; ir < drs; ++ir)
+    for (size_t ic = 0; ic < dcs; ++ic)
+      EXPECT_DOUBLE_EQ(memblockref[ir * dcs_stride + ic], memblockdst[ir * dcs_stride + ic]);
+}
+
 struct BinaryMtxOpTest : testing::Test {
   void init_matrix(double* m, size_t sz){
     for (size_t i = 0; i < sz; ++i)
