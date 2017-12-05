@@ -88,7 +88,7 @@ template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<TrnOp, X>>& exp
   RegName p1 = to_ssa(ret, static_cast<const Uop<TrnOp, X>&>(expr).param());
   const SSAregData& p1dat = ret.context.lookup(p1);
   RegName p2 = ret.context.gen();
-  RegName dst = ret.context.gen(nullptr, p1dat.mCols, p1dat.mRows);
+  RegName dst = ret.context.gen(nullptr, p1dat.mCols, p1dat.mRows); //TODO: destination row size has to have the extra space demanded when it was a column
   ret.instructions.emplace_back(Instr(InstrType::Trn, dst, p1, p2));
   return dst;
 }

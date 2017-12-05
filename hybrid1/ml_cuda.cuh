@@ -179,7 +179,7 @@ void rnd_normal_init_2d_cuda_pd(double* dst, curandStatePhilox4_32_10_t* states,
 
 // matrix transpose operation
 template <size_t BZ = CUDA_MAX_TSZ>
-__global__ void transpose_2d_cukernel_pd(double* __restrict__ dst, const double* __restrict__ src){
+__global__ void transpose_2d_cukernel_pd(double* __restrict__ dst, const double* __restrict__ src, size_t dcolstride){
   const size_t lcol = threadIdx.x;
   const size_t lrow = threadIdx.y;
   const size_t lcolsize = blockDim.x;
@@ -187,7 +187,6 @@ __global__ void transpose_2d_cukernel_pd(double* __restrict__ dst, const double*
   const size_t gcol = blockIdx.x;
   const size_t grow = blockIdx.y;
   const size_t colsize = lcolsize * gridDim.x;
-  const size_t rowsize = lrowsize * gridDim.y;
   const size_t icol = lcolsize * gcol + lcol;
   const size_t irow = lrowsize * grow + lrow;
   const size_t dstlcol = lcol % lrowsize;
@@ -199,16 +198,16 @@ __global__ void transpose_2d_cukernel_pd(double* __restrict__ dst, const double*
 
   __syncthreads();
 
-  dst[ gcol * lcolsize * rowsize + grow * lrowsize + dstlrow * rowsize + dstlcol ] = sm[lrow * lcolsize + lcol + SPPL::cuda_cf_offset(lrow * lcolsize + lcol)];
+  dst[ gcol * lcolsize * dcolstride + grow * lrowsize + dstlrow * dcolstride + dstlcol ] = sm[lrow * lcolsize + lcol + SPPL::cuda_cf_offset(lrow * lcolsize + lcol)];
 }
 
 //TODO: check if this is going to work for boundary cases where memory size for source and destination are very different. e.g. transpose a matrix of 50 * 4
-void transpose_2d_cuda_pd(double* __restrict__ dst, const double* __restrict__ src, size_t rowstride, size_t colstride){
+void transpose_2d_cuda_pd(double* __restrict__ dst, const double* __restrict__ src, size_t rowstride, size_t colstride, size_t dcolstride){
   BlkSz bs = get_gpu_block_size(rowstride, colstride);
   dim3 tpb(bs.cpb, bs.rpb);
   dim3 blocks(colstride / bs.cpb, rowstride / bs.rpb);
 
-  transpose_2d_cukernel_pd<><<< blocks, tpb >>>(dst, src);
+  transpose_2d_cukernel_pd<><<< blocks, tpb >>>(dst, src, dcolstride);
 }
 
 // add operation

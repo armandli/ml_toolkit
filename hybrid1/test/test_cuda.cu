@@ -286,7 +286,7 @@ TEST_F(TransposeTest, TransposeTest1){
   CUDADBG(cudaMemcpy(devblock, memblock, sizeof(double) * rsz * csz, cudaMemcpyHostToDevice));
   transpose_cpu(memblockref, memblock, rsz, csz);
 
-  transpose_2d_cuda_pd(devblockdst, devblock, rsz, csz);
+  transpose_2d_cuda_pd(devblockdst, devblock, rsz, csz, rsz);
   CUDADBG(cudaMemcpy(memblockdst, devblockdst, sizeof(double) * rsz * csz, cudaMemcpyDeviceToHost));
   EXPECT_TRUE(0 == memcmp(memblockref, memblockdst, sizeof(double) * rsz * csz));
 }
@@ -303,7 +303,7 @@ TEST_F(TransposeTest, TransposeTest2){
   CUDADBG(cudaMemcpy(devblock, memblock, sizeof(double) * rsz * csz, cudaMemcpyHostToDevice));
   transpose_cpu(memblockref, memblock, rsz, csz);
 
-  transpose_2d_cuda_pd(devblockdst, devblock, rsz, csz);
+  transpose_2d_cuda_pd(devblockdst, devblock, rsz, csz, rsz);
   CUDADBG(cudaMemcpy(memblockdst, devblockdst, sizeof(double) * rsz * csz, cudaMemcpyDeviceToHost));
   EXPECT_TRUE(0 == memcmp(memblockref, memblockdst, sizeof(double) * rsz * csz));
 }
@@ -320,7 +320,7 @@ TEST_F(TransposeTest, TransposeTest3){
   CUDADBG(cudaMemcpy(devblock, memblock, sizeof(double) * rsz * csz, cudaMemcpyHostToDevice));
   transpose_cpu(memblockref, memblock, rsz, csz);
 
-  transpose_2d_cuda_pd(devblockdst, devblock, rsz, csz);
+  transpose_2d_cuda_pd(devblockdst, devblock, rsz, csz, rsz);
   CUDADBG(cudaMemcpy(memblockdst, devblockdst, sizeof(double) * rsz * csz, cudaMemcpyDeviceToHost));
   EXPECT_TRUE(0 == memcmp(memblockref, memblockdst, sizeof(double) * rsz * csz));
 }
@@ -337,7 +337,7 @@ TEST_F(TransposeTest, TransposeTest4){
   CUDADBG(cudaMemcpy(devblock, memblock, sizeof(double) * rsz * csz, cudaMemcpyHostToDevice));
   transpose_cpu(memblockref, memblock, rsz, csz);
 
-  transpose_2d_cuda_pd(devblockdst, devblock, rsz, csz);
+  transpose_2d_cuda_pd(devblockdst, devblock, rsz, csz, rsz);
   CUDADBG(cudaMemcpy(memblockdst, devblockdst, sizeof(double) * rsz * csz, cudaMemcpyDeviceToHost));
   EXPECT_TRUE(0 == memcmp(memblockref, memblockdst, sizeof(double) * rsz * csz));
 }
@@ -354,7 +354,7 @@ TEST_F(TransposeTest, TransposeTest5){
   CUDADBG(cudaMemcpy(devblock, memblock, sizeof(double) * rsz * csz, cudaMemcpyHostToDevice));
   transpose_cpu(memblockref, memblock, rsz, csz);
 
-  transpose_2d_cuda_pd(devblockdst, devblock, rsz, csz);
+  transpose_2d_cuda_pd(devblockdst, devblock, rsz, csz, rsz);
   CUDADBG(cudaMemcpy(memblockdst, devblockdst, sizeof(double) * rsz * csz, cudaMemcpyDeviceToHost));
   EXPECT_TRUE(0 == memcmp(memblockref, memblockdst, sizeof(double) * rsz * csz));
 }
@@ -371,7 +371,7 @@ TEST_F(TransposeTest, TransposeTest6){
   CUDADBG(cudaMemcpy(devblock, memblock, sizeof(double) * rsz * csz, cudaMemcpyHostToDevice));
   transpose_cpu(memblockref, memblock, rsz, csz);
 
-  transpose_2d_cuda_pd(devblockdst, devblock, rsz, csz);
+  transpose_2d_cuda_pd(devblockdst, devblock, rsz, csz, rsz);
   CUDADBG(cudaMemcpy(memblockdst, devblockdst, sizeof(double) * rsz * csz, cudaMemcpyDeviceToHost));
   EXPECT_TRUE(0 == memcmp(memblockref, memblockdst, sizeof(double) * rsz * csz));
 }
@@ -388,7 +388,7 @@ TEST_F(TransposeTest, TransposeTest7){
   CUDADBG(cudaMemcpy(devblock, memblock, sizeof(double) * rsz * csz, cudaMemcpyHostToDevice));
   transpose_cpu(memblockref, memblock, rsz, csz);
 
-  transpose_2d_cuda_pd(devblockdst, devblock, rsz, csz);
+  transpose_2d_cuda_pd(devblockdst, devblock, rsz, csz, rsz);
   CUDADBG(cudaMemcpy(memblockdst, devblockdst, sizeof(double) * rsz * csz, cudaMemcpyDeviceToHost));
   EXPECT_TRUE(0 == memcmp(memblockref, memblockdst, sizeof(double) * rsz * csz));
 }
@@ -405,7 +405,7 @@ TEST_F(TransposeTest, TransposeTest8){
   CUDADBG(cudaMemcpy(devblock, memblock, sizeof(double) * rsz * csz, cudaMemcpyHostToDevice));
   transpose_cpu(memblockref, memblock, rsz, csz);
 
-  transpose_2d_cuda_pd(devblockdst, devblock, rsz, csz);
+  transpose_2d_cuda_pd(devblockdst, devblock, rsz, csz, rsz);
   CUDADBG(cudaMemcpy(memblockdst, devblockdst, sizeof(double) * rsz * csz, cudaMemcpyDeviceToHost));
   EXPECT_TRUE(0 == memcmp(memblockref, memblockdst, sizeof(double) * rsz * csz));
 }
@@ -422,7 +422,7 @@ TEST_F(TransposeTest, TransposeTest9){
   CUDADBG(cudaMemcpy(devblock, memblock, sizeof(double) * rsz * csz, cudaMemcpyHostToDevice));
   transpose_cpu(memblockref, memblock, rsz, csz);
 
-  transpose_2d_cuda_pd(devblockdst, devblock, rsz, csz);
+  transpose_2d_cuda_pd(devblockdst, devblock, rsz, csz, rsz);
   CUDADBG(cudaMemcpy(memblockdst, devblockdst, sizeof(double) * rsz * csz, cudaMemcpyDeviceToHost));
   EXPECT_TRUE(0 == memcmp(memblockref, memblockdst, sizeof(double) * rsz * csz));
 }
@@ -456,7 +456,7 @@ struct TransposeTest2 : testing::Test {
 TEST_F(TransposeTest2, TransposeTest1){
   srs = 50, scs = 4, drs = 4, dcs = 50;
   size_t srs_stride = ML::roundup_row(srs), scs_stride = ML::roundup_col(scs),
-         drs_stride = ML::roundup_row(drs), dcs_stride = ML::roundup_col(dcs);
+         drs_stride = ML::roundup_row(ML::roundup_col(drs)), dcs_stride = ML::roundup_col(dcs);
 
   CUDADBG(cudaMalloc(&devblock, sizeof(double) * srs_stride * scs_stride));
   CUDADBG(cudaMalloc(&devblockdst, sizeof(double) * drs_stride * dcs_stride));
@@ -468,7 +468,7 @@ TEST_F(TransposeTest2, TransposeTest1){
   CUDADBG(cudaMemcpy(devblock, memblock, sizeof(double) * srs_stride * scs_stride, cudaMemcpyHostToDevice));
   transpose_cpu(memblockref, memblock, srs, scs, scs_stride, dcs_stride);
 
-  transpose_2d_cuda_pd(devblockdst, devblock, srs_stride, scs_stride); //TODO
+  transpose_2d_cuda_pd(devblockdst, devblock, srs_stride, scs_stride, dcs_stride);
   CUDADBG(cudaMemcpy(memblockdst, devblockdst, sizeof(double) * drs_stride * dcs_stride, cudaMemcpyDeviceToHost));
 
   for (size_t ir = 0; ir < drs; ++ir)
