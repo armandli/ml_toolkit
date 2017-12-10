@@ -20,21 +20,23 @@ namespace ML::SSE {
 namespace {
 const long long oned  = 0xFFFFFFFFFFFFFFFFLL;
 const long long poned = 0x7FFFFFFFFFFFFFFFLL;
+const long long nan_spattern = 0x7FF0000000000000LL;
+const long long nan_sfilter  = 0x000FFFFFFFFFFFFFLL;
 
 const __m256d pd1 = _mm256_set1_pd(1.);
+const __m256d pd2 = _mm256_set1_pd(2.);
 const __m256d nd1 = _mm256_set1_pd(-1.);
 const __m256d zd1 = _mm256_set1_pd(0.);
+const __m256d v256  = _mm256_set1_pd(256.);
+
+const __m256i snan = _mm256_set1_epi64x(nan_spattern);
+const __m256i sfil = _mm256_set1_epi64x(nan_sfilter);
+const __m256i zero = _mm256_set1_epi64x(0);
 } // namespace
 
 namespace SPPL {
 
 __m256d _mm256_isnan_pd(__m256d x){
-  long long spattern = 0x7FF0000000000000LL;
-  long long sfilter  = 0x000FFFFFFFFFFFFFLL;
-  __m256i snan = _mm256_set1_epi64x(spattern);
-  __m256i sfil = _mm256_set1_epi64x(sfilter);
-  __m256i zero = _mm256_set1_epi64x(0);
-
   __m256i cx = _mm256_castpd_si256(x);
   __m256i sx = _mm256_and_si256(cx, snan);
   __m256i fx = _mm256_and_si256(cx, sfil);
@@ -48,14 +50,9 @@ __m256d _mm256_isnan_pd(__m256d x){
 }
 
 __m256d _mm256_fexp_pd(__m256d x){
-  __m256d v1024 = _mm256_set1_pd(1024.);
-  __m256d v1    = _mm256_set1_pd(1.);
+  __m256d k = _mm256_div_pd(x, v256);
+  k = _mm256_add_pd(k, pd1);
 
-  __m256d k = _mm256_div_pd(x, v1024);
-  k = _mm256_add_pd(k, v1);
-
-  k = _mm256_mul_pd(k, k);
-  k = _mm256_mul_pd(k, k);
   k = _mm256_mul_pd(k, k);
   k = _mm256_mul_pd(k, k);
   k = _mm256_mul_pd(k, k);
@@ -70,10 +67,9 @@ __m256d _mm256_fexp_pd(__m256d x){
 
 __m256d _mm256_exp_pd(__m256d x){
   __m256d v1048576 = _mm256_set1_pd(1048576.);
-  __m256d v1    = _mm256_set1_pd(1.);
 
   __m256d k = _mm256_div_pd(x, v1048576);
-  k = _mm256_add_pd(k, v1);
+  k = _mm256_add_pd(k, pd1);
 
   k = _mm256_mul_pd(k, k);
   k = _mm256_mul_pd(k, k);
@@ -100,12 +96,10 @@ __m256d _mm256_exp_pd(__m256d x){
 }
 
 __m256d _mm256_tanh_pd(__m256d x){
-  __m256d v1 = _mm256_set1_pd(1.);
-  __m256d v2 = _mm256_set1_pd(2.);
-  __m256d x2 = _mm256_mul_pd(x, v2);
-  __m256d exp2x = _mm256_fexp_pd(x2); //NOTE: using _mm256_exp_pd could drastically increase precision
-  __m256d nom = _mm256_sub_pd(exp2x, v1);
-  __m256d dnm = _mm256_add_pd(exp2x, v1);
+  __m256d x2 = _mm256_mul_pd(x, pd2);
+  __m256d exp2x = _mm256_exp_pd(x2); //NOTE: using _mm256_exp_pd could drastically increase precision
+  __m256d nom = _mm256_sub_pd(exp2x, pd1);
+  __m256d dnm = _mm256_add_pd(exp2x, pd1);
   __m256d r = _mm256_div_pd(nom, dnm);
   return r;
 }
@@ -1050,8 +1044,8 @@ void deriviative_row_2d_sse_pd(Dstp dst, Srcp o, Srcp y, size_t rows, size_t col
   __m256i oi = _mm256_set1_epi64x(oned);
   __m256d ov = _mm256_castsi256_pd(oi);
   __m256d sz = _mm256_set1_pd((double)rows);
-  for (size_t ir = 0; ir < rows; ++ir){
-    for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
+  for (size_t ir = 0; ir < rows; ++ir)
+    for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
       __m256d a = _mm256_loadu_pd(&o[ir * colstride + ic]);
       __m256d b = _mm256_loadu_pd(&y[ir * colstride + ic]);
       __m256d c = _mm256_sub_pd(a, b);
@@ -1061,13 +1055,6 @@ void deriviative_row_2d_sse_pd(Dstp dst, Srcp o, Srcp y, size_t rows, size_t col
       __m256d r = _mm256_and_pd(d, t2);
       _mm256_storeu_pd(&dst[ir * colstride + ic], r);
     }
-    for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
-      double d = o[ir * colstride + ic] - y[ir * colstride + ic];
-      d /= (double)rows;
-      if (std::isnan(d)) d = 0.;
-      dst[ir * colstride + ic] = d;
-    }
-  }
 }
 
 //TODO: perhaps comparison with tolerance here is still not completely correct

@@ -181,8 +181,10 @@ std::ostream& operator << (std::ostream& out, const Mtx& m){
 class ReductionResult: public Memory {
   double mVal;
 public:
+  ReductionResult(): Memory(&mVal, 1, 1), mVal(0.) {}
+
   template <typename CRTP>
-  ReductionResult(MtxBase<CRTP>&& expr): Memory(&mVal, 1, 1), mVal(0) {
+  ReductionResult(MtxBase<CRTP>&& expr): Memory(&mVal, 1, 1), mVal(0.) {
     ssa() = to_ssa(expr, *this);
   }
   ~ReductionResult() = default;
