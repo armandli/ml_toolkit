@@ -152,6 +152,15 @@ template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<SqrtOp, X>>& ex
     ret.instructions.emplace_back(Instr(InstrType::Sqrt, dst, p1, p2));
   return dst;
 }
+template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<AbsOp, X>>& expr){
+  RegName p1 = to_ssa(ret, static_cast<const Uop<AbsOp, X>&>(expr).param());
+  const SSAregData& p1dat = ret.context.lookup(p1);
+  RegName p2 = ret.context.gen();
+  RegName dst = ret.context.gen(nullptr, p1dat.mRows, p1dat.mCols);
+
+  ret.instructions.emplace_back(Instr(InstrType::Abs, dst, p1, p2));
+  return dst;
+}
 template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<SumOp, X>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Uop<SumOp, X>&>(expr).param());
   RegName p2 = ret.context.gen();
@@ -483,6 +492,9 @@ std::ostream& operator << (std::ostream& out, const SSA& ssa){
       break;
       case InstrType::SqrtC:
         out << instr.mDst << " <- sqrtc(" << instr.mSrc1 << ")\n";
+      break;
+      case InstrType::Abs:
+        out << instr.mDst << " <- abs(" << instr.mSrc1 << ")\n";
       break;
       case InstrType::Sum:
         out << instr.mDst << " <- sum(" << instr.mSrc1 << ")\n";

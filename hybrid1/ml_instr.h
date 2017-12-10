@@ -77,6 +77,7 @@ enum class InstrType : unsigned {
   Isnan,
   Isnan0,
   Sqrt,
+  Abs,
   Sum,
   CELoss,
   CEAccuracy,
@@ -118,6 +119,7 @@ std::ostream& operator << (std::ostream& out, const Instr& instr){
     case InstrType::Sigmoid:out << "sigmoid("; break;
     case InstrType::Sqrt:   out << "sqrt("; break;
     case InstrType::SqrtC:  out << "sqrtc("; break;
+    case InstrType::Abs:    out << "abs("; break;
     case InstrType::Sum:    out << "sum("; break;
     default:;
   }
@@ -172,7 +174,7 @@ std::ostream& operator << (std::ostream& out, const Instr& instr){
       /* DO NOTHING */
     break;
     case InstrType::Exp: case InstrType::Isnan: case InstrType::Isnan0: case InstrType::Sigmoid:
-    case InstrType::Sum: case InstrType::Sqrt: case InstrType::SqrtC:
+    case InstrType::Sum: case InstrType::Sqrt: case InstrType::SqrtC: case InstrType::Abs:
       out << ")";
     break;
     //TODO: expand operation here

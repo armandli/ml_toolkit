@@ -60,6 +60,7 @@ struct LocalValueNumberHash {
       case InstrType::MSELoss:    pr[0] = 33; break;
       case InstrType::SqrtC:      pr[0] = 34; break;
       case InstrType::MSEAccuracy:pr[0] = 35; break;
+      case InstrType::Abs:        pr[0] = 36; break;
       //TODO: expand operation here
       default: assert(false);
     }
@@ -105,7 +106,7 @@ void local_value_numbering(SSA& ssa){
       case InstrType::GTMC: case InstrType::GTCM: case InstrType::GT0MC: case InstrType::GT0CM:
       case InstrType::Trn: case InstrType::Not: case InstrType::Tanh: case InstrType::Softmax:
       case InstrType::Exp: case InstrType::Isnan: case InstrType::Isnan0: case InstrType::Sum:
-      case InstrType::Sqrt: case InstrType::SqrtC:
+      case InstrType::Sqrt: case InstrType::SqrtC: case InstrType::Abs:
         /* DO NOTHING */
       break;
       //TODO: expand operation here

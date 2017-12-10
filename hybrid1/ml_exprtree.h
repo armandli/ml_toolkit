@@ -205,6 +205,22 @@ Uop<SqrtOp, X> sqrt(MtxBase<X>&& a){
 }
 /* END sqrt */
 
+/* BEGIN abs */
+struct AbsOp {
+  static void debug(std::stringstream& ss){
+    ss << "abs";
+  }
+};
+
+Uop<AbsOp, MtxRef> abs(MtxRef&& a){
+  return Uop<AbsOp, MtxRef>(std::move(a));
+}
+template <typename X>
+Uop<AbsOp, X> abs(MtxBase<X>&& a){
+  return Uop<AbsOp, X>(static_cast<X&&>(a));
+}
+/* END abs */
+
 /* BEGIN sum all */
 struct SumOp {
   static void debug(std::stringstream& ss){

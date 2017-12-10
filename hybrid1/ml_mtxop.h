@@ -108,10 +108,10 @@ void sqrt_c_1d_mtxop_pd(Dstp dst, double src){
   *dst = std::sqrt(src);
 }
 
-void transpose_2d_mtxop_pd(double* __restrict__ dst, const double* const __restrict__ src, size_t rows, size_t cols, size_t colstride, size_t dcolstride){
+void abs_2d_mtxop_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t colstride){
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ++ic)
-      dst[ic * dcolstride + ir] = src[ir * colstride + ic];
+      dst[ir * colstride + ic] = std::abs(src[ir * colstride + ic]);
 }
 
 } // ML::MTXOP
