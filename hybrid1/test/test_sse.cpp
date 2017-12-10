@@ -265,7 +265,7 @@ TEST_F(SSESimpleOperation, ElemMulConst){
     for (size_t j = 0; j < 24; ++j)
       expected1[i * 24 + j] = (i * 24 + j) * b;
 
-  emul_const_2d_sse_pd(buffer1, buffer1, b, 24, 24);
+  emul_const_2d_sse_pd(buffer1, buffer1, b, 24, 24, 24);
   EXPECT_TRUE(0 == memcmp(buffer1, expected1, sizeof(double) * 24 * 24));
 }
 
