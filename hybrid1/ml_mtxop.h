@@ -1,6 +1,9 @@
 #ifndef ML_MTXOP
 #define ML_MTXOP
 
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
 #include <random>
 #include <algorithm>
 
@@ -11,38 +14,23 @@ namespace ML::MTXOP {
 using Dstp = double* const;
 using Srcp  = const double* const;
 
-void rnd_uniform_init_2d_mtxop_pd(Dstp dst, double lb, double ub, size_t rows, size_t cols, size_t rowstride, size_t colstride){
-  std::default_random_engine& eng = ML::get_default_random_engine();
-  std::uniform_real_distribution<double> dist(lb, ub);
-
+void rnd_uniform_init_2d_mtxop_pd(Dstp dst, double lb, double ub, size_t rows, size_t cols, size_t colstride){
+  srand(time(NULL));
   for (size_t ir = 0; ir < rows; ++ir){
-    std::for_each(&dst[ir * colstride], &dst[ir * colstride + cols], [&eng, &dist](double& d){
-        d = dist(eng);
-    });
-    std::for_each(&dst[ir * colstride + cols], &dst[(ir + 1) * colstride], [](double& d){
-        d = 0.;
+    std::for_each(&dst[ir * colstride], &dst[ir * colstride + cols], [lb, ub](double& d){
+        d = (double)rand() / RAND_MAX * (ub - lb) - lb;
     });
   }
-  std::for_each(&dst[rows * colstride], &dst[rowstride * colstride],[](double& d){
-      d = 0.;
-  });
 }
 
-void rnd_normal_init_2d_mtxop_pd(Dstp dst, double ex, double sd, size_t rows, size_t cols, size_t rowstride, size_t colstride){
+void rnd_normal_init_2d_mtxop_pd(Dstp dst, double ex, double sd, size_t rows, size_t cols, size_t colstride){
   std::default_random_engine& eng = ML::get_default_random_engine();
   std::normal_distribution<double> dist(ex, sd);
 
-  for (size_t ir = 0; ir < rows; ++ir){
+  for (size_t ir = 0; ir < rows; ++ir)
     std::for_each(&dst[ir * colstride], &dst[ir * colstride + cols], [&eng, &dist](double& d){
         d = dist(eng);
     });
-    std::for_each(&dst[ir * colstride + cols], &dst[(ir + 1) * colstride], [](double& d){
-        d = 0.;
-    });
-  }
-  std::for_each(&dst[rows * colstride], &dst[rowstride * colstride],[](double& d){
-      d = 0.;
-  });
 }
 
 //TODO: do not expose this function

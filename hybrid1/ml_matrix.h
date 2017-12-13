@@ -107,8 +107,8 @@ public:
     Memory(nullptr, r, c), mRowStride(roundup_row(r)), mColStride(roundup_col(c)) {
     set_data(new double[mRowStride * mColStride]);
     switch (rtype){
-      case RandomizationType::Uniform:  MTXOP::rnd_uniform_init_2d_mtxop_pd(data(), p1, p2, rows(), cols(), mRowStride, mColStride); break;
-      case RandomizationType::Gaussian: MTXOP::rnd_normal_init_2d_mtxop_pd(data(), p1, p2, rows(), cols(), mRowStride, mColStride); break;
+      case RandomizationType::Uniform:  MTXOP::rnd_uniform_init_2d_mtxop_pd(data(), p1, p2, rows(), cols(), mColStride); break;
+      case RandomizationType::Gaussian: MTXOP::rnd_normal_init_2d_mtxop_pd(data(), p1, p2, rows(), cols(), mColStride); break;
       default: assert(false);
     }
   }
