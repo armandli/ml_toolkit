@@ -463,6 +463,15 @@ std::ostream& operator << (std::ostream& out, const SSA& ssa){
       case InstrType::GT0CM:
         out << instr.mDst << " <- " << ssa.context.lookup(instr.mSrc1).mVal << " >0 " << instr.mSrc2 << "\n";
       break;
+      case InstrType::Trn1Dot:
+        out << instr.mDst << " <- ~" << instr.mSrc1 << " ^ " << instr.mSrc2 << "\n";
+      break;
+      case InstrType::Trn2Dot:
+        out << instr.mDst << " <- " << instr.mSrc1 << " ^ ~" << instr.mSrc2 << "\n";
+      break;
+      case InstrType::Trn3Dot:
+        out << instr.mDst << " <- ~" << instr.mSrc1 << " ^ ~" << instr.mSrc2 << "\n";
+      break;
       case InstrType::Trn:
         out << instr.mDst << " <- ~" << instr.mSrc1 << "\n";
       break;

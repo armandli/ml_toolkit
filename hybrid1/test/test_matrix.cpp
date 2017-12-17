@@ -205,3 +205,74 @@ TEST_F(ElemOp, Deriviative3){
     for (size_t ic = 0; ic < 3; ++ic)
       EXPECT_NEAR(r(ir, ic), expected[ir * 3 + ic], 0.00001);
 }
+
+void matrix_multiply_trn1(double* r, Mtx& a, Mtx& b, size_t m, size_t n, size_t k){
+  for (size_t ir = 0; ir < m; ++ir)
+    for (size_t ic = 0; ic < n; ++ic)
+      for (size_t kk = 0; kk < k; ++kk)
+        r[ir * n + ic] += a(kk, ir) * b(kk, ic);
+}
+
+TEST_F(ElemOp, Trn1Dot1){
+  size_t m = 17, n = 23, k = 13;
+  Mtx a(k, m), b(k, n);
+  init(a);
+  init(b);
+  Mtx r = (~a) ^ b;
+  r.evaluate(arena);
+
+  double* expected = new double[m * n];
+  memset(expected, 0, sizeof(double) * m * n);
+  matrix_multiply_trn1(expected, a, b, m, n, k);
+  
+  for (size_t ir = 0; ir < m; ++ir)
+    for (size_t ic = 0; ic < n; ++ic)
+      EXPECT_NEAR(r(ir, ic), expected[ir * n + ic], 0.000001);
+}
+
+void matrix_multiply_trn2(double* r, Mtx& a, Mtx& b, size_t m, size_t n, size_t k){
+  for (size_t ir = 0; ir < m; ++ir)
+    for (size_t ic = 0; ic < n; ++ic)
+      for (size_t kk = 0; kk < k; ++kk)
+        r[ir * n + ic] += a(ir, kk) * b(ic, kk);
+}
+
+TEST_F(ElemOp, Trn2Dot1){
+  size_t m = 17, n = 23, k = 13;
+  Mtx a(m, k), b(n, k);
+  init(a);
+  init(b);
+  Mtx r = a ^ (~b);
+  r.evaluate(arena);
+
+  double* expected = new double[m * n];
+  memset(expected, 0, sizeof(double) * m * n);
+  matrix_multiply_trn2(expected, a, b, m, n, k);
+
+  for (size_t ir = 0; ir < m; ++ir)
+    for (size_t ic = 0; ic < n; ++ic)
+      EXPECT_NEAR(r(ir, ic), expected[ir * n + ic], 0.000001);
+}
+
+void matrix_multiply_trn3(double* r, Mtx& a, Mtx& b, size_t m, size_t n, size_t k){
+  for (size_t ir = 0; ir < m; ++ir)
+    for (size_t ic = 0; ic < n; ++ic)
+      for (size_t kk = 0; kk < k; ++kk)
+        r[ir * n + ic] += a(kk, ir) * b(ic, kk);
+}
+
+TEST_F(ElemOp, Trn3Dot1){
+  Mtx a(13, 17), b(23, 13);
+  init(a);
+  init(b);
+  Mtx r = (~a) ^ (~b);
+  r.evaluate(arena);
+
+  double* expected = new double[17 * 23];
+  memset(expected, 0, sizeof(double) * 17 * 23);
+  matrix_multiply_trn3(expected, a, b, 17, 23, 13);
+
+  for (size_t ir = 0; ir < 17; ++ir)
+    for (size_t ic = 0; ic < 23; ++ic)
+      EXPECT_NEAR(r(ir, ic), expected[ir * 23 + ic], 0.000001);
+}

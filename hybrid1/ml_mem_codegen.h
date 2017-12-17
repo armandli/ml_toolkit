@@ -217,15 +217,62 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         assert(s1size.rs > 0 && s1size.cs > 0 && s2size.rs > 0 && s2size.cs > 0);
         if (ctx.type(si.mDst) == RegType::Reg)
           ctx.set_reg_size(si.mDst, s1size.rs, s2size.cs);
-        s1size.rs = roundup_row(s1size.rs);
-        s1size.cs = roundup_col(s1size.cs);
-        s2size.rs = roundup_row(s2size.rs);
-        s2size.cs = roundup_row(s2size.cs);
         cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                     s1size.rs, s2size.cs, s1size.cs, 1,
                     s1, roundup_col(s1size.cs),
                     s2, roundup_col(s2size.cs),
                     0., d, roundup_col(s2size.cs));
+      }
+      break;
+      case InstrType::Trn1Dot: {
+        double* s1 = find_mem(si.mSrc1);
+        double* s2 = find_mem(si.mSrc2);
+        double* d  = find_mem(si.mDst);
+        assert(s1 != nullptr && s2 != nullptr && d != nullptr);
+        RegSize s1size = find_size(si.mSrc1);
+        RegSize s2size = find_size(si.mSrc2);
+        assert(s1size.rs > 0 && s1size.cs > 0 && s2size.rs > 0 && s2size.cs > 0);
+        if (ctx.type(si.mDst) == RegType::Reg)
+          ctx.set_reg_size(si.mDst, s1size.cs, s2size.cs);
+        cblas_dgemm(CblasRowMajor, CblasTrans, CblasNoTrans,
+                    s1size.cs, s2size.cs, s2size.rs, 1,
+                    s1, roundup_col(s1size.cs),
+                    s2, roundup_col(s2size.cs),
+                    0., d, roundup_col(s2size.cs));
+      }
+      break;
+      case InstrType::Trn2Dot: {
+        double* s1 = find_mem(si.mSrc1);
+        double* s2 = find_mem(si.mSrc2);
+        double* d  = find_mem(si.mDst);
+        assert(s1 != nullptr && s2 != nullptr && d != nullptr);
+        RegSize s1size = find_size(si.mSrc1);
+        RegSize s2size = find_size(si.mSrc2);
+        assert(s1size.rs > 0 && s1size.cs > 0 && s2size.rs > 0 && s2size.cs > 0);
+        if (ctx.type(si.mDst) == RegType::Reg)
+          ctx.set_reg_size(si.mDst, s1size.rs, s2size.rs);
+        cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
+                    s1size.rs, s2size.rs, s1size.cs, 1,
+                    s1, roundup_col(s1size.cs),
+                    s2, roundup_col(s2size.cs),
+                    0., d, roundup_col(s2size.rs));
+      }
+      break;
+      case InstrType::Trn3Dot: {
+        double* s1 = find_mem(si.mSrc1);
+        double* s2 = find_mem(si.mSrc2);
+        double* d  = find_mem(si.mDst);
+        assert(s1 != nullptr && s2 != nullptr && d != nullptr);
+        RegSize s1size = find_size(si.mSrc1);
+        RegSize s2size = find_size(si.mSrc2);
+        assert(s1size.rs > 0 && s1size.cs > 0 && s2size.rs > 0 && s2size.cs > 0);
+        if (ctx.type(si.mDst) == RegType::Reg)
+          ctx.set_reg_size(si.mDst, s1size.cs, s2size.rs);
+        cblas_dgemm(CblasRowMajor, CblasTrans, CblasTrans,
+                    s1size.cs, s2size.rs, s1size.rs, 1,
+                    s1, roundup_col(s1size.cs),
+                    s2, roundup_col(s2size.cs),
+                    0., d, roundup_col(s2size.rs));
       }
       break;
       case InstrType::CELoss:
@@ -451,7 +498,7 @@ void memvaluateSSA(SSA& ssa, MemArena& arena){
   arena.reserve(regsize.rs * regsize.cs, minregs);
   MemInstrContext context(arena, regsize, minregs);
 
-//  //GOTHERE
+  //GOTHERE
 //  std::cout << "temps: " << minregs << std::endl;
 
   std::vector<Instr> instr = local_register_allocation(ssa, context, liveness);

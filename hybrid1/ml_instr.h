@@ -95,6 +95,9 @@ enum class InstrType : unsigned {
   DSS,
   MSELoss,
   MSEAccuracy,
+  Trn1Dot, // A^T * B
+  Trn2Dot, // A * B^T
+  Trn3Dot, // A^T * B^T
 };
 
 struct Instr {
@@ -121,6 +124,8 @@ std::ostream& operator << (std::ostream& out, const Instr& instr){
     case InstrType::SqrtC:  out << "sqrtc("; break;
     case InstrType::Abs:    out << "abs("; break;
     case InstrType::Sum:    out << "sum("; break;
+    case InstrType::Trn1Dot:
+    case InstrType::Trn3Dot:out << "~"; break;
     default:;
   }
   out << instr.mSrc1;
@@ -152,8 +157,11 @@ std::ostream& operator << (std::ostream& out, const Instr& instr){
     case InstrType::Mask:
       out << " mask " << instr.mSrc2;
     break;
-    case InstrType::Dot:
+    case InstrType::Dot: case InstrType::Trn1Dot:
       out << " ^ " << instr.mSrc2;
+    break;
+    case InstrType::Trn2Dot: case InstrType::Trn3Dot:
+      out << " ^ ~" << instr.mSrc2;
     break;
     case InstrType::CELoss: case InstrType::MSELoss:
       out << " loss " << instr.mSrc2;

@@ -61,6 +61,9 @@ struct LocalValueNumberHash {
       case InstrType::SqrtC:      pr[0] = 34; break;
       case InstrType::MSEAccuracy:pr[0] = 35; break;
       case InstrType::Abs:        pr[0] = 36; break;
+      case InstrType::Trn1Dot:    pr[0] = 37; break;
+      case InstrType::Trn2Dot:    pr[0] = 38; break;
+      case InstrType::Trn3Dot:    pr[0] = 39; break;
       //TODO: expand operation here
       default: assert(false);
     }
@@ -101,6 +104,7 @@ void local_value_numbering(SSA& ssa){
       // cases where order does matter
       case InstrType::Sub: case InstrType::EDiv: case InstrType::Dot: case InstrType::GT: case InstrType::Mask:
       case InstrType::DRelu: case InstrType::CELoss: case InstrType::CEAccuracy: case InstrType::DSS:
+      case InstrType::Trn1Dot: case InstrType::Trn2Dot: case InstrType::Trn3Dot:
       case InstrType::SubCC: case InstrType::EDivCC: case InstrType::MSELoss: case InstrType::MSEAccuracy:
       case InstrType::SubMC: case InstrType::SubCM: case InstrType::EDivMC: case InstrType::EDivCM:
       case InstrType::GTMC: case InstrType::GTCM: case InstrType::GT0MC: case InstrType::GT0CM:
@@ -217,10 +221,13 @@ void select_instruction(SSA& ssa){
       return std::numeric_limits<size_t>::max();
     }
 
-    size_t prev_def(size_t idx, size_t eidx, RegName reg){
+    size_t prev_def(size_t idx, size_t eidx, RegName reg, bool isDone){
+      if (idx == 0) return std::numeric_limits<size_t>::max();
       for (size_t i = idx - 1; i > eidx; --i)
-        if (done[i] == false && ssa.instructions[i].mDst == reg)
+        if (done[i] == isDone && ssa.instructions[i].mDst == reg)
           return i;
+      if (done[eidx] == isDone && ssa.instructions[eidx].mDst == reg)
+        return eidx;
       return std::numeric_limits<size_t>::max();
     }
 
@@ -363,9 +370,9 @@ void select_instruction(SSA& ssa){
         Instr& pinstr = segment[0];
         size_t oidx;
         if (pinstr.mDst == instr.mSrc1)
-          oidx = prev_def(idx, pidx, instr.mSrc2);
+          oidx = prev_def(idx, pidx, instr.mSrc2, false);
         else
-          oidx = prev_def(idx, pidx, instr.mSrc1);
+          oidx = prev_def(idx, pidx, instr.mSrc1, false);
         if (oidx == std::numeric_limits<size_t>::max())
           return;
         if (consumeDSigmoid4(oidx)){
@@ -403,9 +410,9 @@ void select_instruction(SSA& ssa){
         Instr& pinstr = segment[0];
         size_t oidx;
         if (pinstr.mDst == instr.mSrc1)
-          oidx = prev_def(idx, pidx, instr.mSrc2);
+          oidx = prev_def(idx, pidx, instr.mSrc2, false);
         else
-          oidx = prev_def(idx, pidx, instr.mSrc1);
+          oidx = prev_def(idx, pidx, instr.mSrc1, false);
         if (oidx == std::numeric_limits<size_t>::max())
           return;
         if (consumeDSigmoid3(oidx)){
@@ -563,10 +570,53 @@ void select_instruction(SSA& ssa){
       }
     }
 
+    void consumeTrnDot1P1(size_t idx){
+      if (idx == std::numeric_limits<size_t>::max()) return;
+      const Instr& instr = ssa.instructions[idx];
+      if (instr.mType == InstrType::Dot){
+        //TODO: need to check the result of transpose is no longer being used
+        //not generating any instr, generate in part 2
+        segment.clear();
+      }
+    }
+
+    void consumeTrnDot1P2(size_t idx){
+      const Instr& instr = ssa.instructions[idx];
+      size_t p1idx = prev_def(idx, 0, instr.mSrc1, true);
+      size_t p2idx = prev_def(idx, 0, instr.mSrc2, true);
+      const Instr& s1instr = ssa.instructions[p1idx];
+      const Instr& s2instr = ssa.instructions[p2idx];
+      if (s1instr.mType == InstrType::Trn && s2instr.mType == InstrType::Trn){
+        RegName src1, src2;
+        if (s1instr.mDst == instr.mSrc1){
+          src1 = s1instr.mSrc1;
+          src2 = s2instr.mSrc1;
+        } else {
+          src1 = s2instr.mSrc1;
+          src2 = s1instr.mSrc1;
+        }
+        RegName dst = instr.mDst;
+        segment.clear();
+        segment.emplace_back(Instr(InstrType::Trn3Dot, dst, src1, src2));
+      } else if (s1instr.mType == InstrType::Trn){
+        RegName src1 = s1instr.mSrc1;
+        RegName src2 = instr.mSrc2;
+        RegName dst  = instr.mDst;
+        segment.clear();
+        segment.emplace_back(Instr(InstrType::Trn1Dot, dst, src1, src2));
+      } else if (s2instr.mType == InstrType::Trn){
+        RegName src1 = instr.mSrc1;
+        RegName src2 = s2instr.mSrc1;
+        RegName dst  = instr.mDst;
+        segment.clear();
+        segment.emplace_back(Instr(InstrType::Trn2Dot, dst, src1, src2));
+      }
+    }
+
     void state0(size_t idx){
       const Instr& instr = ssa.instructions[idx];
       segment.push_back(instr);
-      //done[idx] = true; optimization
+      done[idx] = true;
       switch (instr.mType){
         case InstrType::EMulMC: {
           const SSAregData& s1dat = ssa.context.lookup(instr.mSrc1);
@@ -587,6 +637,12 @@ void select_instruction(SSA& ssa){
         break;
         case InstrType::Sub:
           consumeDeriviative1DSS1(next_use(idx));
+        break;
+        case InstrType::Trn:
+          consumeTrnDot1P1(next_use(idx));
+        break;
+        case InstrType::Dot:
+          consumeTrnDot1P2(idx); //terminal instruction
         break;
         default:;
       }

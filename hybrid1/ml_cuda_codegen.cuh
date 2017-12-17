@@ -245,7 +245,7 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
         assert(s1size.rs > 0 && s1size.cs > 0 && s2size.rs > 0 && s2size.cs > 0);
         ctx.set_reg_size(si.mDst, s1size.rs, s2size.cs);
         //TODO: reuse the cublas handle and all constant values
-        int lda = s1size.rs, ldb = s1size.cs, ldc = s1size.rs;
+        int lda = roundup_col(s1size.cs), ldb = roundup_col(s2size.cs), ldc = roundup_col(s2size.cs);
         const double alpha = 1.;
         const double beta  = 0.;
         const double* palpha = &alpha;
@@ -255,8 +255,71 @@ void evaluate_cuda_instr(const std::vector<Instr>& instr, CUDAInstrContext& ctx)
         cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, s1size.rs, s2size.cs, s1size.cs, palpha, s1, lda, s2, ldb, pbeta, d, ldc);
         cublasDestroy(handle);
       }
-      //TODO: add CELoss and CEAccuracy function
       break;
+      case InstrType::Trn1Dot: {
+        double* s1 = find_mem(si.mSrc1);
+        double* s2 = find_mem(si.mSrc2);
+        double* d  = find_mem(si.mDst);
+        assert(s1 != nullptr && s2 != nullptr && d != nullptr);
+        RegSize s1size = find_size(si.mSrc1);
+        RegSize s2size = find_size(si.mSrc2);
+        assert(s1size.rs > 0 && s1size.cs > 0 && s2size.rs > 0 && s2size.cs > 0);
+        ctx.set_reg_size(si.mDst, s1size.cs, s2size.cs);
+        //TODO: reuse the cublas handle and all constant values
+        int lda = roundup_col(s1size.cs), ldb = roundup_col(s2size.cs), ldc = roundup_col(s2size.cs);
+        const double alpha = 1.;
+        const double beta  = 0.;
+        const double* palpha = &alpha;
+        const double* pbeta  = &beta;
+        cublasHandle_t handle;
+        cublasCreate(&handle);
+        cublasDgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, s1size.cs, s2size.cs, s1size.rs, palpha, s1, lda, s2, ldb, pbeta, d, ldc);
+        cublasDestroy(handle);
+      }
+      break;
+      case InstrType::Trn2Dot: {
+        double* s1 = find_mem(si.mSrc1);
+        double* s2 = find_mem(si.mSrc2);
+        double* d  = find_mem(si.mDst);
+        assert(s1 != nullptr && s2 != nullptr && d != nullptr);
+        RegSize s1size = find_size(si.mSrc1);
+        RegSize s2size = find_size(si.mSrc2);
+        assert(s1size.rs > 0 && s1size.cs > 0 && s2size.rs > 0 && s2size.cs > 0);
+        ctx.set_reg_size(si.mDst, s1size.rs, s2size.rs);
+        //TODO: reuse the cublas handle and all constant values
+        int lda = roundup_col(s1size.cs), ldb = roundup_col(s2size.cs), ldc = roundup_col(s2size.rs);
+        const double alpha = 1.;
+        const double beta  = 0.;
+        const double* palpha = &alpha;
+        const double* pbeta  = &beta;
+        cublasHandle_t handle;
+        cublasCreate(&handle);
+        cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_T, s1size.rs, s2size.rs, s1size.cs, palpha, s1, lda, s2, ldb, pbeta, d, ldc);
+        cublasDestroy(handle);
+      }
+      break;
+      case InstrType::Trn3Dot: {
+        double* s1 = find_mem(si.mSrc1);
+        double* s2 = find_mem(si.mSrc2);
+        double* d  = find_mem(si.mDst);
+        assert(s1 != nullptr && s2 != nullptr && d != nullptr);
+        RegSize s1size = find_size(si.mSrc1);
+        RegSize s2size = find_size(si.mSrc2);
+        assert(s1size.rs > 0 && s1size.cs > 0 && s2size.rs > 0 && s2size.cs > 0);
+        ctx.set_reg_size(si.mDst, s1size.cs, s2size.rs);
+        //TODO: reuse the cublas handle and all constant values
+        int lda = roundup_col(s1size.cs), ldb = roundup_col(s2size.cs), ldc = roundup_col(s2size.rs);
+        const double alpha = 1.;
+        const double beta  = 0.;
+        const double* palpha = &alpha;
+        const double* pbeta  = &beta;
+        cublasHandle_t handle;
+        cublasCreate(&handle);
+        cublasDgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, s1size.cs, s2size.rs, s1size.rs, palpha, s1, lda, s2, ldb, pbeta, d, ldc);
+        cublasDestroy(handle);
+      }
+      break;
+      //TODO: add CELoss and CEAccuracy function
       case InstrType::SubMC:
       case InstrType::EDivMC:
       case InstrType::GTMC: {
