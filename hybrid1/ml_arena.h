@@ -2,6 +2,9 @@
 #define ML_ARENA
 
 #include <cassert>
+#include <cstdlib>
+
+#include <ml_common.h>
 
 namespace ML {
 
@@ -16,19 +19,19 @@ public:
 
   MemArena(): mMem(nullptr), mRegSize(0), mCount(0), mSize(0) {}
   MemArena(size_t regsize, size_t count): mRegSize(regsize), mCount(count), mSize(regsize * count) {
-    mMem = new double[mSize];
+    mMem = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * mSize);
   }
   ~MemArena(){
     if (mMem != nullptr)
-      delete[] mMem;
+      free(mMem);
   }
 
   void reserve(size_t regsize, size_t count){
     size_t expect = regsize * count;
     if (mSize < expect){
       if (mMem != nullptr)
-        delete[] mMem;
-      mMem = new double[expect];
+        free(mMem);
+      mMem = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * expect);
       mSize = expect;
     }
     mRegSize = regsize;

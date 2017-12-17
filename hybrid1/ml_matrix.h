@@ -2,6 +2,7 @@
 #define ML_MATRIX
 
 #include <cassert>
+#include <cstdlib>
 #include <fstream>
 
 #include <ml_common.h>
@@ -26,7 +27,7 @@ protected:
   double* data() const { return mData; }
   void set_data(double* data){ mData = data; }
   void delete_data(){
-    if (mData) delete[] mData;
+    if (mData) free(mData);
     mData = nullptr;
   }
 
@@ -76,7 +77,8 @@ class Mtx: public Memory {
     mRowStride = roundup_row(rows());
     mColStride = roundup_col(cols());
 
-    set_data(new double[mRowStride * mColStride]);
+    double* ptr = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * mRowStride * mColStride);
+    set_data(ptr);
 
     in.read((char*)data(), sizeof(double) * mRowStride * mColStride);
   }
@@ -90,14 +92,16 @@ public:
   Mtx(): Memory(nullptr), mRowStride(0), mColStride(0) {}
   Mtx(size_t r, size_t c, double v = 0.):
     Memory(nullptr, r, c), mRowStride(roundup_row(r)), mColStride(roundup_col(c)) {
-    set_data(new double[mRowStride * mColStride]);
+    double* ptr = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * mRowStride * mColStride);
+    set_data(ptr);
     if (v == 0.) memset(data(), 0, sizeof(double) * mRowStride * mColStride);
     else         SSE::const_init_1d_sse_pd(data(), v, rows(), mColStride);
   }
   Mtx(size_t r, size_t c, const std::vector<double>& v):
     Memory(nullptr, r, c), mRowStride(roundup_row(r)), mColStride(roundup_col(c)) {
     assert(v.size() >= r * c);
-    set_data(new double[mRowStride * mColStride]);
+    double* ptr = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * mRowStride * mColStride);
+    set_data(ptr);
     //TODO: use SSE instructions to do this
     for (size_t ir = 0, k = 0; ir < r; ++ir, ++k)
       for (size_t ic = 0; ic < c; ++ic)
@@ -105,7 +109,8 @@ public:
   }
   Mtx(size_t r, size_t c, RandomizationType rtype, double p1, double p2):
     Memory(nullptr, r, c), mRowStride(roundup_row(r)), mColStride(roundup_col(c)) {
-    set_data(new double[mRowStride * mColStride]);
+    double* ptr = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * mRowStride * mColStride);
+    set_data(ptr);
     switch (rtype){
       case RandomizationType::Uniform:  MTXOP::rnd_uniform_init_2d_mtxop_pd(data(), p1, p2, rows(), cols(), mColStride); break;
       case RandomizationType::Gaussian: MTXOP::rnd_normal_init_2d_mtxop_pd(data(), p1, p2, rows(), cols(), mColStride); break;
@@ -141,7 +146,8 @@ public:
     set_cols(c);
     mRowStride = roundup_row(r);
     mColStride = roundup_col(c);
-    set_data(new double[mRowStride * mColStride]);
+    double* ptr = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * mRowStride * mColStride);
+    set_data(ptr);
   }
 
   void evaluate(MemArena& arena){
