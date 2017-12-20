@@ -18,7 +18,7 @@ void rnd_uniform_init_2d_mtxop_pd(Dstp dst, double lb, double ub, size_t rows, s
   srand(time(NULL));
   for (size_t ir = 0; ir < rows; ++ir){
     std::for_each(&dst[ir * colstride], &dst[ir * colstride + cols], [lb, ub](double& d){
-        d = (double)rand() / RAND_MAX * (ub - lb) - lb;
+        d = (double)rand() / RAND_MAX * (ub - lb) + lb;
     });
   }
 }

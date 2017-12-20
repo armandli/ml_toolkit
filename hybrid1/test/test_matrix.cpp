@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <cstdlib>
 #include <cmath>
 
 #include <ml_common.h>
@@ -198,12 +199,14 @@ TEST_F(ElemOp, Deriviative3){
   Mtx r = ML::isnan0((o - y) / 5000);
   r.evaluate(arena);
 
-  double* expected = new double[5000 * 3];
+  double* expected = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * 5000 * 3);
   expected_mse_deriviative(expected, o, y);
 
   for (size_t ir = 0; ir < 5000; ++ir)
     for (size_t ic = 0; ic < 3; ++ic)
       EXPECT_NEAR(r(ir, ic), expected[ir * 3 + ic], 0.00001);
+
+  free(expected);
 }
 
 void matrix_multiply_trn1(double* r, Mtx& a, Mtx& b, size_t m, size_t n, size_t k){
@@ -221,13 +224,15 @@ TEST_F(ElemOp, Trn1Dot1){
   Mtx r = (~a) ^ b;
   r.evaluate(arena);
 
-  double* expected = new double[m * n];
+  double* expected = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * m * n);
   memset(expected, 0, sizeof(double) * m * n);
   matrix_multiply_trn1(expected, a, b, m, n, k);
   
   for (size_t ir = 0; ir < m; ++ir)
     for (size_t ic = 0; ic < n; ++ic)
       EXPECT_NEAR(r(ir, ic), expected[ir * n + ic], 0.000001);
+
+  free(expected);
 }
 
 void matrix_multiply_trn2(double* r, Mtx& a, Mtx& b, size_t m, size_t n, size_t k){
@@ -245,13 +250,15 @@ TEST_F(ElemOp, Trn2Dot1){
   Mtx r = a ^ (~b);
   r.evaluate(arena);
 
-  double* expected = new double[m * n];
+  double* expected = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * m * n);
   memset(expected, 0, sizeof(double) * m * n);
   matrix_multiply_trn2(expected, a, b, m, n, k);
 
   for (size_t ir = 0; ir < m; ++ir)
     for (size_t ic = 0; ic < n; ++ic)
       EXPECT_NEAR(r(ir, ic), expected[ir * n + ic], 0.000001);
+
+  free(expected);
 }
 
 void matrix_multiply_trn3(double* r, Mtx& a, Mtx& b, size_t m, size_t n, size_t k){
@@ -268,11 +275,13 @@ TEST_F(ElemOp, Trn3Dot1){
   Mtx r = (~a) ^ (~b);
   r.evaluate(arena);
 
-  double* expected = new double[17 * 23];
+  double* expected = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * 17 * 23);
   memset(expected, 0, sizeof(double) * 17 * 23);
   matrix_multiply_trn3(expected, a, b, 17, 23, 13);
 
   for (size_t ir = 0; ir < 17; ++ir)
     for (size_t ic = 0; ic < 23; ++ic)
       EXPECT_NEAR(r(ir, ic), expected[ir * 23 + ic], 0.000001);
+
+  free(expected);
 }

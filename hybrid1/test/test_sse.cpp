@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <cstdlib>
 #include <ctime>
 #include <random>
 #include <limits>
@@ -23,10 +24,10 @@ double random_double_softmax(){
 }
 
 TEST(SSE, ConstInitBlock){
-  double* buffer1 = new double[MTX_BLOCK_RSZ * 10 * 10];
-  double* buffer2 = new double[MTX_BLOCK_RSZ * 10 * 10];
-  double* expected1 = new double[MTX_BLOCK_RSZ * 10 * 10];
-  double* expected2 = new double[MTX_BLOCK_RSZ * 10 * 10];
+  double* buffer1 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 10 * 10);
+  double* buffer2 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 10 * 10);
+  double* expected1 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 10 * 10);
+  double* expected2 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 10 * 10);
   size_t blksz = 20;
 
   const_init_2d_sse_pd(buffer1, 10., 17, 18, blksz, blksz);
@@ -45,22 +46,22 @@ TEST(SSE, ConstInitBlock){
   EXPECT_TRUE(0 == memcmp(buffer1, expected1, sizeof(double) * MTX_BLOCK_RSZ * 10 * 10));
   EXPECT_TRUE(0 == memcmp(buffer2, expected2, sizeof(double) * MTX_BLOCK_RSZ * 10 * 10));
 
-  delete[] buffer1;
-  delete[] buffer2;
-  delete[] expected1;
-  delete[] expected2;
+  free(buffer1);
+  free(buffer2);
+  free(expected1);
+  free(expected2);
 }
 
 TEST(SSE, TransposeBlock1){
-  double* buffer1 = new double[MTX_BLOCK_RSZ * 8 * 8];
-  double* buffer2 = new double[MTX_BLOCK_RSZ * 3 * 4];
-  double* buffer3 = new double[MTX_BLOCK_RSZ * 4 * 3];
-  double* dst1 = new double[MTX_BLOCK_RSZ * 8 * 8];
-  double* dst2 = new double[MTX_BLOCK_RSZ * 3 * 4];
-  double* dst3 = new double[MTX_BLOCK_RSZ * 4 * 3];
-  double* expected1 = new double[MTX_BLOCK_RSZ * 8 * 8];
-  double* expected2 = new double[MTX_BLOCK_RSZ * 3 * 4];
-  double* expected3 = new double[MTX_BLOCK_RSZ * 4 * 3];
+  double* buffer1 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 8 * 8);
+  double* buffer2 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 3 * 4);
+  double* buffer3 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 4 * 3);
+  double* dst1 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 8 * 8);
+  double* dst2 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 3 * 4);
+  double* dst3 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 4 * 3);
+  double* expected1 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 8 * 8);
+  double* expected2 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 3 * 4);
+  double* expected3 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 4 * 3);
 
   for (size_t i = 0; i < MTX_BLOCK_RSZ * 8 * 8; ++i){
     buffer1[i] = (double)i;
@@ -95,21 +96,21 @@ TEST(SSE, TransposeBlock1){
   EXPECT_TRUE(0 == memcmp(dst2, expected2, sizeof(double) * 3 * 4 * MTX_BLOCK_RSZ));
   EXPECT_TRUE(0 == memcmp(dst3, expected3, sizeof(double) * 4 * 3 * MTX_BLOCK_RSZ));
 
-  delete[] buffer1;
-  delete[] dst1;
-  delete[] expected1;
-  delete[] buffer2;
-  delete[] dst2;
-  delete[] expected2;
-  delete[] buffer3;
-  delete[] dst3;
-  delete[] expected3;
+  free(buffer1);
+  free(dst1);
+  free(expected1);
+  free(buffer2);
+  free(dst2);
+  free(expected2);
+  free(buffer3);
+  free(dst3);
+  free(expected3);
 }
 
 TEST(SSE, TransposeBlock2){
-  double* buffer1 = new double[52 * 32];
-  double* dst1 = new double[32 * 64];
-  double* expected1 = new double[32 * 64];
+  double* buffer1 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * 52 * 32);
+  double* dst1 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * 32 * 64);
+  double* expected1 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * 32 * 64);
   for (size_t i = 0; i < 52 * 32; ++i)
     buffer1[i] = i;
   for (size_t ir = 0; ir < 32; ++ir)
@@ -124,9 +125,9 @@ TEST(SSE, TransposeBlock2){
 }
 
 TEST(SSE, TransposeBlock3){
-  double* buffer1 = new double[52 * 32]; //50 * 4
-  double* dst1 = new double[4 * 64];     //4  * 50
-  double* expected1 = new double[32 * 64];
+  double* buffer1 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * 52 * 32); //50 * 4
+  double* dst1 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * 4 * 64);     //4  * 50
+  double* expected1 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * 32 * 64);
   for (size_t ir = 0; ir < 50; ++ir)
     for (size_t ic = 0; ic < 4; ++ic)
       buffer1[ir * 32 + ic] = ir * 4 + ic;
@@ -143,12 +144,12 @@ TEST(SSE, TransposeBlock3){
 
 struct SSESimpleOperation : testing::Test {
   SSESimpleOperation(){
-    buffer1 = new double[MTX_BLOCK_RSZ * 12 * 12];
-    buffer2 = new double[MTX_BLOCK_RSZ * 12 * 12];
-    expected1 = new double[MTX_BLOCK_RSZ * 12 * 12];
-    buffer3 = new double[MTX_BLOCK_RSZ * 8];
-    buffer4 = new double[MTX_BLOCK_RSZ * 8];
-    expected2 = new double[MTX_BLOCK_RSZ * 8];
+    buffer1 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 12 * 12);
+    buffer2 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 12 * 12);
+    expected1 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 12 * 12);
+    buffer3 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 8);
+    buffer4 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 8);
+    expected2 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 8);
 
     for (size_t i = 0; i < 24; ++i)
       for (size_t j = 0; j < 24; ++j){
@@ -164,12 +165,12 @@ struct SSESimpleOperation : testing::Test {
   }
 
   ~SSESimpleOperation(){
-    delete[] buffer1;
-    delete[] buffer2;
-    delete[] buffer3;
-    delete[] buffer4;
-    delete[] expected1;
-    delete[] expected2;
+    free(buffer1);
+    free(buffer2);
+    free(buffer3);
+    free(buffer4);
+    free(expected1);
+    free(expected2);
   }
 
   double* buffer1;
@@ -313,13 +314,13 @@ void assign_zero(double* a, size_t sz){
 
 struct SSEComplexReduction : testing::Test {
   SSEComplexReduction(){
-    buffer1 = new double[MTX_BLOCK_RSZ * 12 * 12];
-    buffer2 = new double[MTX_BLOCK_RSZ * 12 * 12];
-    buffer5 = new double[MTX_BLOCK_RSZ * 12 * 12];
-    expected1 = new double[MTX_BLOCK_RSZ * 12 * 12];
-    buffer3 = new double[MTX_BLOCK_RSZ * 12 * 8];
-    buffer4 = new double[MTX_BLOCK_RSZ * 12 * 8];
-    expected2 = new double[MTX_BLOCK_RSZ * 12 * 8];
+    buffer1 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 12 * 12);
+    buffer2 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 12 * 12);
+    buffer5 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 12 * 12);
+    expected1 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 12 * 12);
+    buffer3 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 12 * 8);
+    buffer4 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 12 * 8);
+    expected2 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * MTX_BLOCK_RSZ * 12 * 8);
 
     assign_zero(buffer1, 24 * 24);
     assign_zero(buffer2, 24 * 24);
@@ -330,13 +331,13 @@ struct SSEComplexReduction : testing::Test {
     assign_zero(expected2, 24 * 16);
   }
   ~SSEComplexReduction(){
-    delete[] buffer1;
-    delete[] buffer2;
-    delete[] expected1;
-    delete[] buffer3;
-    delete[] buffer4;
-    delete[] expected2;
-    delete[] buffer5;
+    free(buffer1);
+    free(buffer2);
+    free(expected1);
+    free(buffer3);
+    free(buffer4);
+    free(expected2);
+    free(buffer5);
   }
   double* buffer1;
   double* buffer2;

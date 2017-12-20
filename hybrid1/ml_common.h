@@ -13,6 +13,8 @@
 #define MTX_BLOCK_CSZ   32UL
 #define MTX_BLOCK_CMASK 31UL
 
+#define CPU_THREAD_SIZE 8UL
+
 #define CUDA_MAX_TSZ    1024UL
 #define CUDA_SQ_TSZ     32UL
 #define CUDA_SLICE_SZ   4UL

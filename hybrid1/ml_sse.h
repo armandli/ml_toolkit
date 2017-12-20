@@ -112,7 +112,7 @@ using Srcp = const double* const;
 void const_init_1d_sse_pd(Dstp dst, double v, size_t rows, size_t colstride){
   __m256d v256 = _mm256_set1_pd(v);
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ)
-    _mm256_storeu_pd(&dst[i], v256);
+    _mm256_stream_pd(&dst[i], v256);
 }
 
 void const_init_2d_sse_pd(Dstp dst, double v, size_t rows, size_t cols, size_t rowstride, size_t colstride){
@@ -125,19 +125,19 @@ void const_init_2d_sse_pd(Dstp dst, double v, size_t rows, size_t cols, size_t r
   if (cols < colstride){
     for (size_t ir = 0; ir < rows; ++ir){
       for(size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ)
-        _mm256_storeu_pd(&dst[ir * colstride + ic], v256);
-      _mm256_storeu_pd(&dst[ir * colstride + (cols & ~MTX_BLOCK_RMASK)], b256);
+        _mm256_stream_pd(&dst[ir * colstride + ic], v256);
+      _mm256_stream_pd(&dst[ir * colstride + (cols & ~MTX_BLOCK_RMASK)], b256);
     }
   } else {
     for (size_t ir = 0; ir < rows; ++ir)
       for(size_t ic = 0; ic < colstride; ic += MTX_BLOCK_RSZ)
-        _mm256_storeu_pd(&dst[ir * colstride + ic], v256);
+        _mm256_stream_pd(&dst[ir * colstride + ic], v256);
   }
 
   v256 = _mm256_setzero_pd();
   for (size_t ir = rows; ir < rowstride; ++ir)
     for (size_t ic = 0; ic < colstride; ic += MTX_BLOCK_RSZ)
-      _mm256_storeu_pd(&dst[ir * colstride + ic], v256);
+      _mm256_stream_pd(&dst[ir * colstride + ic], v256);
 }
 
 void transpose4x4_2d_sse_pd(double* __restrict__ const dst, const double* __restrict__ const src, size_t mincols, size_t rowstride, size_t colstride, size_t dcolstride){
@@ -146,10 +146,10 @@ void transpose4x4_2d_sse_pd(double* __restrict__ const dst, const double* __rest
       double* d = &dst[j * dcolstride + i];
       const double* s = &src[i * colstride + j];
 
-      __m256d r1 = _mm256_loadu_pd(&s[colstride * 0]);
-      __m256d r2 = _mm256_loadu_pd(&s[colstride * 1]);
-      __m256d r3 = _mm256_loadu_pd(&s[colstride * 2]);
-      __m256d r4 = _mm256_loadu_pd(&s[colstride * 3]);
+      __m256d r1 = _mm256_load_pd(&s[colstride * 0]);
+      __m256d r2 = _mm256_load_pd(&s[colstride * 1]);
+      __m256d r3 = _mm256_load_pd(&s[colstride * 2]);
+      __m256d r4 = _mm256_load_pd(&s[colstride * 3]);
     
       __m256d t1 = _mm256_unpacklo_pd(r1, r2);
       __m256d t2 = _mm256_unpackhi_pd(r1, r2);
@@ -161,19 +161,19 @@ void transpose4x4_2d_sse_pd(double* __restrict__ const dst, const double* __rest
       __m256d p3 = _mm256_permute2f128_pd(t1, t3, 0x31);
       __m256d p4 = _mm256_permute2f128_pd(t2, t4, 0x31);
     
-      _mm256_storeu_pd(&d[dcolstride * 0], p1);
-      _mm256_storeu_pd(&d[dcolstride * 1], p2);
-      _mm256_storeu_pd(&d[dcolstride * 2], p3);
-      _mm256_storeu_pd(&d[dcolstride * 3], p4);
+      _mm256_stream_pd(&d[dcolstride * 0], p1);
+      _mm256_stream_pd(&d[dcolstride * 1], p2);
+      _mm256_stream_pd(&d[dcolstride * 2], p3);
+      _mm256_stream_pd(&d[dcolstride * 3], p4);
     }
 }
 
 void add_1d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t colstride){
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&s1[i]);
-    __m256d b = _mm256_loadu_pd(&s2[i]);
+    __m256d a = _mm256_load_pd(&s1[i]);
+    __m256d b = _mm256_load_pd(&s2[i]);
     __m256d r = _mm256_add_pd(a, b);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -181,10 +181,10 @@ void add_1d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t colstride){
 void add_2d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t cols, size_t colstride){
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&s1[ir * colstride + ic]);
-      __m256d b = _mm256_loadu_pd(&s2[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&s1[ir * colstride + ic]);
+      __m256d b = _mm256_load_pd(&s2[ir * colstride + ic]);
       __m256d r = _mm256_add_pd(a, b);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
@@ -192,9 +192,9 @@ void add_2d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t cols, size_t 
 void add_const_1d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t colstride){
   __m256d v256 = _mm256_set1_pd(v);
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&src[i]);
+    __m256d a = _mm256_load_pd(&src[i]);
     __m256d r = _mm256_add_pd(a, v256);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -202,18 +202,18 @@ void add_const_2d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t cols,
   __m256d v256 = _mm256_set1_pd(v);
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d s = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d s = _mm256_load_pd(&src[ir * colstride + ic]);
       __m256d r = _mm256_add_pd(s, v256);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
 void sub_1d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t colstride){
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&s1[i]);
-    __m256d b = _mm256_loadu_pd(&s2[i]);
+    __m256d a = _mm256_load_pd(&s1[i]);
+    __m256d b = _mm256_load_pd(&s2[i]);
     __m256d r = _mm256_sub_pd(a, b);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -221,10 +221,10 @@ void sub_1d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t colstride){
 void sub_2d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t cols, size_t colstride){
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&s1[ir * colstride + ic]);
-      __m256d b = _mm256_loadu_pd(&s2[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&s1[ir * colstride + ic]);
+      __m256d b = _mm256_load_pd(&s2[ir * colstride + ic]);
       __m256d r = _mm256_sub_pd(a, b);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
@@ -232,9 +232,9 @@ void sub_2d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t cols, size_t 
 void sub_mc_1d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t colstride){
   __m256d v256 = _mm256_set1_pd(v);
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&src[i]);
+    __m256d a = _mm256_load_pd(&src[i]);
     __m256d r = _mm256_sub_pd(a, v256);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -242,9 +242,9 @@ void sub_mc_2d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t cols, si
   __m256d v256 = _mm256_set1_pd(v);
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d s = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d s = _mm256_load_pd(&src[ir * colstride + ic]);
       __m256d r = _mm256_sub_pd(s, v256);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
@@ -252,9 +252,9 @@ void sub_mc_2d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t cols, si
 void sub_cm_1d_sse_pd(double v, Dstp dst, Srcp src, size_t rows, size_t colstride){
   __m256d v256 = _mm256_set1_pd(v);
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&src[i]);
+    __m256d a = _mm256_load_pd(&src[i]);
     __m256d r = _mm256_sub_pd(v256, a);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -262,18 +262,18 @@ void sub_cm_2d_sse_pd(double v, Dstp dst, Srcp src, size_t rows, size_t cols, si
   __m256d v256 = _mm256_set1_pd(v);
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d s = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d s = _mm256_load_pd(&src[ir * colstride + ic]);
       __m256d r = _mm256_sub_pd(v256, s);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
 void emul_1d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t colstride){
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&s1[i]);
-    __m256d b = _mm256_loadu_pd(&s2[i]);
+    __m256d a = _mm256_load_pd(&s1[i]);
+    __m256d b = _mm256_load_pd(&s2[i]);
     __m256d r = _mm256_mul_pd(a, b);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -281,10 +281,10 @@ void emul_1d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t colstride){
 void emul_2d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t cols, size_t colstride){
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&s1[ir * colstride + ic]);
-      __m256d b = _mm256_loadu_pd(&s2[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&s1[ir * colstride + ic]);
+      __m256d b = _mm256_load_pd(&s2[ir * colstride + ic]);
       __m256d r = _mm256_mul_pd(a, b);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
@@ -292,9 +292,9 @@ void emul_2d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t cols, size_t
 void emul_const_1d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t colstride){
   __m256d v256 = _mm256_set1_pd(v);
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&src[i]);
+    __m256d a = _mm256_load_pd(&src[i]);
     __m256d r = _mm256_mul_pd(a, v256);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -302,19 +302,19 @@ void emul_const_2d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t cols
   __m256d v256 = _mm256_set1_pd(v);
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d s = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d s = _mm256_load_pd(&src[ir * colstride + ic]);
       __m256d r = _mm256_mul_pd(s, v256);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
 //TODO: unit test
 void ediv_1d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t colstride){
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&s1[i]);
-    __m256d b = _mm256_loadu_pd(&s2[i]);
+    __m256d a = _mm256_load_pd(&s1[i]);
+    __m256d b = _mm256_load_pd(&s2[i]);
     __m256d r = _mm256_div_pd(a, b);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -322,10 +322,10 @@ void ediv_1d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t colstride){
 void ediv_2d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t cols, size_t colstride){
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&s1[ir * colstride + ic]);
-      __m256d b = _mm256_loadu_pd(&s2[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&s1[ir * colstride + ic]);
+      __m256d b = _mm256_load_pd(&s2[ir * colstride + ic]);
       __m256d r = _mm256_div_pd(a, b);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
@@ -333,9 +333,9 @@ void ediv_2d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t cols, size_t
 void ediv_mc_1d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t colstride){
   __m256d v256 = _mm256_set1_pd(v);
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&src[i]);
+    __m256d a = _mm256_load_pd(&src[i]);
     __m256d r = _mm256_div_pd(a, v256);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -343,9 +343,9 @@ void ediv_mc_2d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t cols, s
   __m256d v256 = _mm256_set1_pd(v);
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d s = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d s = _mm256_load_pd(&src[ir * colstride + ic]);
       __m256d r = _mm256_div_pd(s, v256);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
@@ -353,9 +353,9 @@ void ediv_mc_2d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t cols, s
 void ediv_cm_1d_sse_pd(double v, Dstp dst, Srcp src, size_t rows, size_t colstride){
   __m256d v256 = _mm256_set1_pd(v);
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&src[i]);
+    __m256d a = _mm256_load_pd(&src[i]);
     __m256d r = _mm256_div_pd(v256, a);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -363,18 +363,18 @@ void ediv_cm_2d_sse_pd(double v, Dstp dst, Srcp src, size_t rows, size_t cols, s
   __m256d v256 = _mm256_set1_pd(v);
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d s = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d s = _mm256_load_pd(&src[ir * colstride + ic]);
       __m256d r = _mm256_div_pd(v256, s);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
 //TODO: unit test
 void exp_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t colstride){
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&src[i]);
+    __m256d a = _mm256_load_pd(&src[i]);
     __m256d r = SPPL::_mm256_fexp_pd(a);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -382,18 +382,18 @@ void exp_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t colstride){
 void exp_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t colstride){
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&src[ir * colstride + ic]);
       __m256d r = SPPL::_mm256_fexp_pd(a);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
 //TODO: unit test
 void not_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t colstride){
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&src[i]);
+    __m256d a = _mm256_load_pd(&src[i]);
     __m256d r = _mm256_cmp_pd(a, zd1, _CMP_EQ_OQ);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -401,18 +401,18 @@ void not_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t colstride){
 void not_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t colstride){
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&src[ir * colstride + ic]);
       __m256d r = _mm256_cmp_pd(a, zd1, _CMP_EQ_OQ);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
 //TODO: unit test
 void isnan_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t colstride){
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&src[i]);
+    __m256d a = _mm256_load_pd(&src[i]);
     __m256d r = SPPL::_mm256_isnan_pd(a);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -420,9 +420,9 @@ void isnan_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t colstride){
 void isnan_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t colstride){
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&src[ir * colstride + ic]);
       __m256d r = SPPL::_mm256_isnan_pd(a);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
@@ -432,11 +432,11 @@ void isnan0_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t colstride){
   __m256d ov = _mm256_castsi256_pd(oi);
 
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&src[i]);
+    __m256d a = _mm256_load_pd(&src[i]);
     __m256d b = SPPL::_mm256_isnan_pd(a);
     __m256d c = _mm256_xor_pd(b, ov);
     __m256d r = _mm256_and_pd(a, c);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -446,11 +446,11 @@ void isnan0_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t colst
   __m256d ov = _mm256_castsi256_pd(oi);
   for (size_t ir = 0; ir < rows; ++ir){
     for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&src[ir * colstride + ic]);
       __m256d b = SPPL::_mm256_isnan_pd(a);
       __m256d c = _mm256_xor_pd(b, ov);
       __m256d r = _mm256_and_pd(a, c);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
     for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
       if (std::isnan(src[ir * colstride + ic]))
@@ -464,9 +464,9 @@ void isnan0_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t colst
 //TODO: unit test
 void sqrt_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t colstride){
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&src[i]);
+    __m256d a = _mm256_load_pd(&src[i]);
     __m256d r = _mm256_sqrt_pd(a);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -474,9 +474,9 @@ void sqrt_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t colstride){
 void sqrt_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t colstride){
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&src[ir * colstride + ic]);
       __m256d r = _mm256_sqrt_pd(a);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
@@ -484,10 +484,10 @@ void sqrt_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t colstri
 void gt0_mc_1d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t colstride){
   const __m256d val = _mm256_set1_pd(v);
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&src[i]);
+    __m256d a = _mm256_load_pd(&src[i]);
     __m256d b = _mm256_cmp_pd(a, val, _CMP_GT_OQ);
     __m256d r = _mm256_and_pd(a, b);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -496,10 +496,10 @@ void gt0_mc_2d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t cols, si
   const __m256d val = _mm256_set1_pd(v);
   for (size_t ir = 0; ir < rows; ++ir){
     for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&src[ir * colstride + ic]);
       __m256d b = _mm256_cmp_pd(a, val, _CMP_GT_OQ);
       __m256d r = _mm256_and_pd(a, b);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
     for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
       if (src[ir * colstride + ic] > v)
@@ -514,10 +514,10 @@ void gt0_mc_2d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t cols, si
 void gt0_cm_1d_sse_pd(double v, Dstp dst, Srcp src, size_t rows, size_t colstride){
   const __m256d val = _mm256_set1_pd(v);
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&src[i]);
+    __m256d a = _mm256_load_pd(&src[i]);
     __m256d b = _mm256_cmp_pd(val, a, _CMP_GT_OQ);
     __m256d r = _mm256_and_pd(a, b);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -526,10 +526,10 @@ void gt0_cm_2d_sse_pd(double v, Dstp dst, Srcp src, size_t rows, size_t cols, si
   const __m256d val = _mm256_set1_pd(v);
   for (size_t ir = 0; ir < rows; ++ir){
     for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&src[ir * colstride + ic]);
       __m256d b = _mm256_cmp_pd(val, a, _CMP_GT_OQ);
       __m256d r = _mm256_and_pd(a, b);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
     for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
       if (v > src[ir * colstride + ic])
@@ -543,10 +543,10 @@ void gt0_cm_2d_sse_pd(double v, Dstp dst, Srcp src, size_t rows, size_t cols, si
 //TODO: unit test
 void gt_1d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t colstride){
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&s1[i]);
-    __m256d b = _mm256_loadu_pd(&s2[i]);
+    __m256d a = _mm256_load_pd(&s1[i]);
+    __m256d b = _mm256_load_pd(&s2[i]);
     __m256d r = _mm256_cmp_pd(a, b, _CMP_GT_OQ);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -554,10 +554,10 @@ void gt_1d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t colstride){
 void gt_2d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t cols, size_t colstride){
   for (size_t ir = 0; ir < rows; ++ir){
     for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&s1[ir * colstride + ic]);
-      __m256d b = _mm256_loadu_pd(&s2[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&s1[ir * colstride + ic]);
+      __m256d b = _mm256_load_pd(&s2[ir * colstride + ic]);
       __m256d r = _mm256_cmp_pd(a, b, _CMP_GT_OQ);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
     for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
       if (s1[ir * colstride + ic] > s2[ir * colstride + ic])
@@ -572,9 +572,9 @@ void gt_2d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t cols, size_t c
 void gt_mc_1d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t colstride){
   const __m256d val = _mm256_set1_pd(v);
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&src[i]);
+    __m256d a = _mm256_load_pd(&src[i]);
     __m256d r = _mm256_cmp_pd(a, val, _CMP_GT_OQ);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -583,9 +583,9 @@ void gt_mc_2d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t cols, siz
   const __m256d val = _mm256_set1_pd(v);
   for (size_t ir = 0; ir < rows; ++ir){
     for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&src[ir * colstride + ic]);
       __m256d r = _mm256_cmp_pd(a, val, _CMP_GT_OQ);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
     for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
       if (src[ir * colstride + ic] > v)
@@ -600,9 +600,9 @@ void gt_mc_2d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t cols, siz
 void gt_cm_1d_sse_pd(double v, Dstp dst, Srcp src, size_t rows, size_t colstride){
   const __m256d val = _mm256_set1_pd(v);
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&src[i]);
+    __m256d a = _mm256_load_pd(&src[i]);
     __m256d r = _mm256_cmp_pd(val, a, _CMP_GT_OQ);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -611,9 +611,9 @@ void gt_cm_2d_sse_pd(double v, Dstp dst, Srcp src, size_t rows, size_t cols, siz
   const __m256d val = _mm256_set1_pd(v);
   for (size_t ir = 0; ir < rows; ++ir){
     for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&src[ir * colstride + ic]);
       __m256d r = _mm256_cmp_pd(val, a, _CMP_GT_OQ);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
     for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
       if (v > src[ir * colstride + ic])
@@ -627,10 +627,10 @@ void gt_cm_2d_sse_pd(double v, Dstp dst, Srcp src, size_t rows, size_t cols, siz
 //TODO: unit test
 void mask_1d_sse_pd(Dstp dst, Srcp src, Srcp mask, size_t rows, size_t colstride){
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&src[i]);
-    __m256d m = _mm256_loadu_pd(&mask[i]);
+    __m256d a = _mm256_load_pd(&src[i]);
+    __m256d m = _mm256_load_pd(&mask[i]);
     __m256d r = _mm256_and_pd(a, m);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -638,10 +638,10 @@ void mask_1d_sse_pd(Dstp dst, Srcp src, Srcp mask, size_t rows, size_t colstride
 void mask_2d_sse_pd(Dstp dst, Srcp src, Srcp mask, size_t rows, size_t cols, size_t colstride){
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&src[ir * colstride + ic]);
-      __m256d m = _mm256_loadu_pd(&mask[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&src[ir * colstride + ic]);
+      __m256d m = _mm256_load_pd(&mask[ir * colstride + ic]);
       __m256d r = _mm256_and_pd(a, m);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
@@ -649,7 +649,7 @@ void mask_2d_sse_pd(Dstp dst, Srcp src, Srcp mask, size_t rows, size_t cols, siz
 double max_row_coeff_pd(Srcp src, size_t cols){
   __m256d maxv = _mm256_set1_pd(std::numeric_limits<double>::min());
   for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&src[ic]);
+    __m256d a = _mm256_load_pd(&src[ic]);
     maxv = _mm256_max_pd(maxv, a);
   }
   double maxa[MTX_BLOCK_RSZ];
@@ -671,7 +671,7 @@ void max_row_coeffs_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size
 double min_row_coeff_pd(Srcp src, size_t cols){
   __m256d minv = _mm256_set1_pd(std::numeric_limits<double>::max());
   for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&src[ic]);
+    __m256d a = _mm256_load_pd(&src[ic]);
     minv = _mm256_min_pd(minv, a);
   }
   double mina[MTX_BLOCK_RSZ];
@@ -692,7 +692,7 @@ void min_row_coeffs_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size
 double sum_row_pd(Srcp src, size_t colstride){
   __m256d sumv = zd1;
   for (size_t i = 0; i < colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&src[i]);
+    __m256d a = _mm256_load_pd(&src[i]);
     sumv      = _mm256_add_pd(sumv, a);
   }
   double suma[MTX_BLOCK_RSZ];
@@ -708,7 +708,7 @@ void sum_rows_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t colstride){
 void sum_all_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t colstride){
   __m256d sumv = zd1;
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&src[i]);
+    __m256d a = _mm256_load_pd(&src[i]);
     sumv      = _mm256_add_pd(sumv, a);
   }
   double suma[MTX_BLOCK_RSZ];
@@ -722,7 +722,7 @@ void sum_all_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t cols
   double  sumd = 0.;
   for (size_t ir = 0; ir < rows; ++ir){
     for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&src[ir * colstride + ic]);
       sumv = _mm256_add_pd(sumv, a);
     }
     for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic)
@@ -748,36 +748,36 @@ void mean_all_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t col
 //TODO: unit test
 void sigmoid_1d_sse_pd(Dstp dst, Srcp m, size_t rows, size_t colstride){
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&m[i]);
+    __m256d a = _mm256_load_pd(&m[i]);
     __m256d b = _mm256_mul_pd(a, nd1);
     __m256d c = SPPL::_mm256_fexp_pd(b); //NOTE: using _mm256_exp_pd could drastically increase precision
     __m256d d = _mm256_add_pd(pd1, c);
     __m256d r = _mm256_div_pd(pd1, d);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
 void sigmoid_2d_sse_pd(Dstp dst, Srcp m, size_t rows, size_t cols, size_t colstride){
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&m[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&m[ir * colstride + ic]);
       __m256d b = _mm256_mul_pd(a, nd1);
       __m256d c = SPPL::_mm256_fexp_pd(b); //NOTE: using _mm256_exp_pd could drastically increase precision
       __m256d d = _mm256_add_pd(pd1, c);
       __m256d r = _mm256_div_pd(pd1, d);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
 //TODO: unit test
 void dsigmoid_1d_sse_pd(Dstp dst, Srcp dm, Srcp m, size_t rows, size_t colstride){
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&m[i]);
+    __m256d a = _mm256_load_pd(&m[i]);
     __m256d c = _mm256_sub_pd(pd1, a);
-    __m256d b = _mm256_loadu_pd(&dm[i]);
+    __m256d b = _mm256_load_pd(&dm[i]);
     __m256d d = _mm256_mul_pd(b, a);
     __m256d r = _mm256_mul_pd(d, c);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -785,20 +785,20 @@ void dsigmoid_1d_sse_pd(Dstp dst, Srcp dm, Srcp m, size_t rows, size_t colstride
 void dsigmoid_2d_sse_pd(Dstp dst, Srcp dm, Srcp m, size_t rows, size_t cols, size_t colstride){
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&m[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&m[ir * colstride + ic]);
       __m256d c = _mm256_sub_pd(pd1, a);
-      __m256d b = _mm256_loadu_pd(&dm[ir * colstride + ic]);
+      __m256d b = _mm256_load_pd(&dm[ir * colstride + ic]);
       __m256d d = _mm256_mul_pd(b, a);
       __m256d r = _mm256_mul_pd(d, c);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
 void tanh_1d_sse_pd(Dstp dst, Srcp m, size_t rows, size_t colstride){
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&m[i]);
+    __m256d a = _mm256_load_pd(&m[i]);
     __m256d r = SPPL::_mm256_tanh_pd(a);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -806,42 +806,42 @@ void tanh_1d_sse_pd(Dstp dst, Srcp m, size_t rows, size_t colstride){
 void tanh_2d_sse_pd(Dstp dst, Srcp m, size_t rows, size_t cols, size_t colstride){
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&m[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&m[ir * colstride + ic]);
       __m256d r = SPPL::_mm256_tanh_pd(a);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
 //TODO: unit test
 void dtanh_1d_sse_pd(Dstp dst, Srcp dm, Srcp m, size_t rows, size_t colstride){
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&m[i]);
+    __m256d a = _mm256_load_pd(&m[i]);
     __m256d b = _mm256_mul_pd(a, a);
     __m256d c = _mm256_sub_pd(pd1, b);
-    __m256d d = _mm256_loadu_pd(&dm[i]);
+    __m256d d = _mm256_load_pd(&dm[i]);
     __m256d r = _mm256_mul_pd(d, c);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
 void dtanh_2d_sse_pd(Dstp dst, Srcp dm, Srcp m, size_t rows, size_t cols, size_t colstride){
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&m[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&m[ir * colstride + ic]);
       __m256d b = _mm256_mul_pd(a, a);
       __m256d c = _mm256_sub_pd(pd1, b);
-      __m256d d = _mm256_loadu_pd(&dm[ir * colstride + ic]);
+      __m256d d = _mm256_load_pd(&dm[ir * colstride + ic]);
       __m256d r = _mm256_mul_pd(d, c);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
 void relu_1d_sse_pd(Dstp dst, Srcp m, size_t rows, size_t colstride){
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&m[i]);
+    __m256d a = _mm256_load_pd(&m[i]);
     __m256d b = _mm256_cmp_pd(a, zd1, _CMP_GT_OQ);
     __m256d r = _mm256_and_pd(a, b);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -849,21 +849,21 @@ void relu_1d_sse_pd(Dstp dst, Srcp m, size_t rows, size_t colstride){
 void relu_2d_sse_pd(Dstp dst, Srcp m, size_t rows, size_t cols, size_t colstride){
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&m[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&m[ir * colstride + ic]);
       __m256d b = _mm256_cmp_pd(a, zd1, _CMP_GT_OQ);
       __m256d r = _mm256_and_pd(a, b);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
 //TODO: unit test
 void drelu_1d_sse_pd(Dstp dst, Srcp dm, Srcp m, size_t rows, size_t colstride){
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&dm[i]);
-    __m256d b = _mm256_loadu_pd(&m[i]);
+    __m256d a = _mm256_load_pd(&dm[i]);
+    __m256d b = _mm256_load_pd(&m[i]);
     __m256d c = _mm256_cmp_pd(b, zd1, _CMP_GT_OQ);
     __m256d r = _mm256_and_pd(a, c);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -871,18 +871,18 @@ void drelu_1d_sse_pd(Dstp dst, Srcp dm, Srcp m, size_t rows, size_t colstride){
 void drelu_2d_sse_pd(Dstp dst, Srcp dm, Srcp m, size_t rows, size_t cols, size_t colstride){
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&dm[ir * colstride + ic]);
-      __m256d b = _mm256_loadu_pd(&m[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&dm[ir * colstride + ic]);
+      __m256d b = _mm256_load_pd(&m[ir * colstride + ic]);
       __m256d c = _mm256_cmp_pd(b, zd1, _CMP_GT_OQ);
       __m256d r = _mm256_and_pd(a, c);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
 void loss_l2_1d_sse_pd(Dstp dst, Srcp m, double reg, size_t rows, size_t colstride){
   __m256d sum = zd1;
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&m[i]);
+    __m256d a = _mm256_load_pd(&m[i]);
     __m256d r = _mm256_mul_pd(a, a);
     sum = _mm256_add_pd(sum, r);
   }
@@ -899,7 +899,7 @@ void loss_l2_2d_sse_pd(Dstp dst, Srcp m, double reg, size_t rows, size_t cols, s
   double  sumd = 0.;
   for (size_t ir = 0; ir < rows; ++ir){
     for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&m[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&m[ir * colstride + ic]);
       __m256d r = _mm256_mul_pd(a, a);
       sumv = _mm256_add_pd(sumv, r);
     }
@@ -920,7 +920,7 @@ void softmax_r_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t colstride){
   for (size_t ir = 0; ir < rows; ++ir){
     __m256d rowsum = zd1;
     for (size_t ic = 0; ic < colstride; ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&src[ir * colstride + ic]);
       a = SPPL::_mm256_fexp_pd(a);
       rowsum = _mm256_add_pd(rowsum, a);
     }
@@ -931,10 +931,10 @@ void softmax_r_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t colstride){
 
     __m256d sumv = _mm256_set1_pd(sum);
     for (size_t ic = 0; ic < colstride; ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&src[ir * colstride + ic]);
       a = SPPL::_mm256_fexp_pd(a);
       __m256d r = _mm256_div_pd(a, sumv);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
   }
 }
@@ -944,7 +944,7 @@ void softmax_r_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t co
     __m256d rowsumv = zd1;
     double  rowsumd = 0.;
     for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&src[ir * colstride + ic]);
       a = SPPL::_mm256_fexp_pd(a);
       rowsumv = _mm256_add_pd(rowsumv, a);
     }
@@ -956,10 +956,10 @@ void softmax_r_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t co
 
     __m256d sumv = _mm256_set1_pd(sum);
     for (size_t ic = 0; ic < colstride; ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&src[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&src[ir * colstride + ic]);
       a = SPPL::_mm256_fexp_pd(a);
       __m256d r = _mm256_div_pd(a, sumv);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
   }
 }
@@ -969,8 +969,8 @@ void softmax_r_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t co
 void diff_square_sum_1d_sse_pd(Dstp dst, Srcp o, Srcp y, size_t rows, size_t colstride){
   __m256d sum = _mm256_set1_pd(0.);
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&o[i]);
-    __m256d b = _mm256_loadu_pd(&y[i]);
+    __m256d a = _mm256_load_pd(&o[i]);
+    __m256d b = _mm256_load_pd(&y[i]);
     __m256d c = _mm256_sub_pd(a, b);
     __m256d r = _mm256_mul_pd(c, c);
     sum       = _mm256_add_pd(sum, r);
@@ -997,8 +997,8 @@ void diff_square_sum_2d_sse_pd(Dstp dst, Srcp o, Srcp y, size_t rows, size_t col
   double  sumd = 0.;
   for (size_t ir = 0; ir < rows; ++ir){
     for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&o[ir * colstride + ic]);
-      __m256d b = _mm256_loadu_pd(&y[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&o[ir * colstride + ic]);
+      __m256d b = _mm256_load_pd(&y[ir * colstride + ic]);
       __m256d c = _mm256_sub_pd(a, b);
       __m256d r = _mm256_mul_pd(c, c);
       sumv      = _mm256_add_pd(sumv, r);
@@ -1028,14 +1028,14 @@ void deriviative_row_1d_sse_pd(Dstp dst, Srcp o, Srcp y, size_t rows, size_t col
   __m256d ov = _mm256_castsi256_pd(oi);
   __m256d sz = _mm256_set1_pd((double)rows);
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&o[i]);
-    __m256d b = _mm256_loadu_pd(&y[i]);
+    __m256d a = _mm256_load_pd(&o[i]);
+    __m256d b = _mm256_load_pd(&y[i]);
     __m256d c = _mm256_sub_pd(a, b);
     __m256d d = _mm256_div_pd(c, sz);
     __m256d t = SPPL::_mm256_isnan_pd(d);
     __m256d t2= _mm256_xor_pd(t, ov);
     __m256d r = _mm256_and_pd(d, t2);
-    _mm256_storeu_pd(&dst[i], r);
+    _mm256_stream_pd(&dst[i], r);
   }
 }
 
@@ -1046,14 +1046,14 @@ void deriviative_row_2d_sse_pd(Dstp dst, Srcp o, Srcp y, size_t rows, size_t col
   __m256d sz = _mm256_set1_pd((double)rows);
   for (size_t ir = 0; ir < rows; ++ir)
     for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
-      __m256d a = _mm256_loadu_pd(&o[ir * colstride + ic]);
-      __m256d b = _mm256_loadu_pd(&y[ir * colstride + ic]);
+      __m256d a = _mm256_load_pd(&o[ir * colstride + ic]);
+      __m256d b = _mm256_load_pd(&y[ir * colstride + ic]);
       __m256d c = _mm256_sub_pd(a, b);
       __m256d d = _mm256_div_pd(c, sz);
       __m256d t = SPPL::_mm256_isnan_pd(d);
       __m256d t2 = _mm256_xor_pd(t, ov);
       __m256d r = _mm256_and_pd(d, t2);
-      _mm256_storeu_pd(&dst[ir * colstride + ic], r);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
 }
 
@@ -1065,8 +1065,8 @@ bool block_cmp_equal_1d_sse_pd(Srcp x, Srcp y, double epsilon, size_t rows, size
   __m256d mask = _mm256_castsi256_pd(mi);
   __m256d thre = _mm256_set1_pd(epsilon);
   for (size_t i = 0; i < rows * colstride; i += MTX_BLOCK_RSZ){
-    __m256d a = _mm256_loadu_pd(&x[i]);
-    __m256d b = _mm256_loadu_pd(&y[i]);
+    __m256d a = _mm256_load_pd(&x[i]);
+    __m256d b = _mm256_load_pd(&y[i]);
     __m256d d = _mm256_sub_pd(a, b);
     __m256d m = _mm256_and_pd(d, mask);
     __m256d t = _mm256_cmp_pd(m, thre, _CMP_LE_OQ);

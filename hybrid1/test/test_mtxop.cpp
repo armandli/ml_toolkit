@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <cstdlib>
+
 #include <ml_common.h>
 #include <ml_mtxop.h>
 
@@ -10,7 +12,7 @@ struct TestInit : testing::Test {
   TestInit(){
     rows = rowstride = MTX_BLOCK_RSZ * 8;
     cols = colstride = MTX_BLOCK_CSZ * 10;
-    buffer1 = new double[rowstride * colstride];
+    buffer1 = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * rowstride * colstride);
   }
   ~TestInit(){
     delete[] buffer1;
@@ -21,7 +23,7 @@ struct TestInit : testing::Test {
 };
 
 TEST_F(TestInit, UniformInitBlock1){
-  rnd_uniform_init_2d_mtxop_pd(buffer1, -10., 10., rows, cols, rowstride, colstride);
+  rnd_uniform_init_2d_mtxop_pd(buffer1, -10., 10., rows, cols, colstride);
 
   for (size_t i = 0; i < rowstride * colstride; ++i){
     EXPECT_TRUE(buffer1[i] >= -10.);
@@ -30,7 +32,7 @@ TEST_F(TestInit, UniformInitBlock1){
 }
 
 TEST_F(TestInit, UniformInitBlock2){
-  rnd_uniform_init_2d_mtxop_pd(buffer1, 5., 15., rows, cols, rowstride, colstride);
+  rnd_uniform_init_2d_mtxop_pd(buffer1, 5., 15., rows, cols, colstride);
 
   for (size_t i = 0; i < rowstride * colstride; ++i){
     EXPECT_TRUE(buffer1[i] >= 5.);
@@ -40,7 +42,7 @@ TEST_F(TestInit, UniformInitBlock2){
 
 
 TEST_F(TestInit, GaussianInitBlock1){
-  rnd_normal_init_2d_mtxop_pd(buffer1, 10., 20., MTX_BLOCK_RSZ * 8, MTX_BLOCK_CSZ * 10, MTX_BLOCK_RSZ * 8, MTX_BLOCK_CSZ * 10);
+  rnd_normal_init_2d_mtxop_pd(buffer1, 10., 20., MTX_BLOCK_RSZ * 8, MTX_BLOCK_CSZ * 10, MTX_BLOCK_CSZ * 10);
 
   for (size_t i = 0; i < rowstride * colstride; ++i){
     EXPECT_TRUE(buffer1[i] >= 10. - 20. * 5);
@@ -49,7 +51,7 @@ TEST_F(TestInit, GaussianInitBlock1){
 }
 
 TEST_F(TestInit, GaussianInitBlock2){
-  rnd_normal_init_2d_mtxop_pd(buffer1, 10., 1., MTX_BLOCK_RSZ * 8, MTX_BLOCK_CSZ * 10, MTX_BLOCK_RSZ * 8, MTX_BLOCK_CSZ * 10);
+  rnd_normal_init_2d_mtxop_pd(buffer1, 10., 1., MTX_BLOCK_RSZ * 8, MTX_BLOCK_CSZ * 10, MTX_BLOCK_CSZ * 10);
 
   for (size_t i = 0; i < rowstride * colstride; ++i){
     EXPECT_TRUE(buffer1[i] >= 10. - 1. * 5);

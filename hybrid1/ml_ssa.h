@@ -25,8 +25,10 @@ struct SSAMtxCommunicator {
     size_t colstride = roundup_col(data.mCols);
     if (dst.data() != nullptr && dst.rowstride() * dst.colstride() != rowstride * colstride)
       dst.delete_data();
-    if (dst.data() == nullptr)
-      dst.set_data(new double[rowstride * colstride]);
+    if (dst.data() == nullptr){
+      double* ptr = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * rowstride * colstride);
+      dst.set_data(ptr);
+    }
     dst.mRowStride = rowstride;
     dst.mColStride = colstride;
     dst.set_rows(data.mRows);
