@@ -30,6 +30,9 @@ __device__ size_t cuda_cf_offset(size_t n){
 
 } //SPPL
 
+using Dstp = double*;
+using Srcp = const double*;
+
 // matrix initialization operation
 __global__ void const_init_2d_cukernel_pd(double* dst, double v, size_t rows, size_t cols, size_t colstride){
   const size_t rowid = blockDim.y * blockIdx.y + threadIdx.y;

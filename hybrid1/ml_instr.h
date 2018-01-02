@@ -175,6 +175,9 @@ std::ostream& operator << (std::ostream& out, const Instr& instr){
     case InstrType::DTanh:
       out << " dtanh " << instr.mSrc2;
     break;
+    case InstrType::DRelu:
+      out << " drelu " << instr.mSrc2;
+    break;
     case InstrType::Deriviative:
       out << " deriviative " << instr.mSrc2;
     break;

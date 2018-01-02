@@ -60,6 +60,20 @@ struct SigmoidFun {
   }
 };
 
+struct ReluFun {
+  template <typename A>
+  auto function(MtxBase<A>&& m) ->
+    decltype(ML::gt0(static_cast<A&&>(m), 0.)) {
+    return   ML::gt0(static_cast<A&&>(m), 0.);
+  }
+
+  template <typename A, typename B>
+  auto deriviative(MtxBase<A>&& dm, MtxBase<B>&& m) ->
+    decltype(ML::drelu(static_cast<A&&>(dm), static_cast<B&&>(m))) {
+    return   ML::drelu(static_cast<A&&>(dm), static_cast<B&&>(m));
+  }
+};
+
 /* Regularization Functions */
 struct L2Reg {
   template <typename A>
@@ -84,6 +98,20 @@ public:
     decltype(std::move(W) + MtxRef(V)) {
     V = V * mu - std::move(dW) * lrate;
     return std::move(W) + MtxRef(V);
+  }
+};
+
+class AdamUpdate {
+  Mtx M, V;
+  double b1, b2;
+public:
+  AdamUpdate(size_t rsize, size_t csize, double b1 = 0.9, double b2 = 0.999):
+    M(rsize, csize), V(rsize, csize), b1(b1), b2(b2) {}
+  auto update(MtxRef&& W, MtxRef&& dW, double lrate) ->
+    decltype(std::move(W) + -1. * lrate * MtxRef(M) / (ML::sqrt(MtxRef(V)) + 1e-8)) {
+    M = b1 * M + (1. - b1) * std::move(dW);
+    V = b2 * V + (1. - b2) * (std::move(dW) * std::move(dW));
+    return   std::move(W) + -1. * lrate * MtxRef(M) / (ML::sqrt(MtxRef(V)) + 1e-8);
   }
 };
 

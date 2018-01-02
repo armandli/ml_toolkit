@@ -36,6 +36,7 @@ const __m256i zero = _mm256_set1_epi64x(0);
 
 namespace SPPL {
 
+//TODO: try instead compare x to itself, nan is not equal to nan but others do
 __m256d _mm256_isnan_pd(__m256d x){
   __m256i cx = _mm256_castpd_si256(x);
   __m256i sx = _mm256_and_si256(cx, snan);

@@ -126,7 +126,7 @@ public:
     mMtxMap.clear();
     mConstMap.clear();
     mRegData.clear();
-    mCounter = 0;
+    mCounter = 1;
   }
 };
 

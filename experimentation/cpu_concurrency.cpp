@@ -118,6 +118,43 @@ void test3(){
   cout << "MTA: " << sum / (double)(CLOCKS_PER_SEC / 1000) << " ms" << endl;
 }
 
+//this is worse than first version
+void multi_thread_add2(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t colstride){
+  future<void> futures[TSIZE];
+
+  for (size_t i = 0; i < TSIZE; ++i){
+    futures[i] = async(launch::async, [i, dst, s1, s2, rows, colstride](){
+        for (size_t idx = i * 4; idx < rows * colstride; idx += 4 * TSIZE){
+          __m256d a = _mm256_load_pd(&s1[idx]);
+          __m256d b = _mm256_load_pd(&s2[idx]);
+          __m256d r = _mm256_add_pd(a, b);
+          _mm256_stream_pd(&dst[idx], r);
+        }
+    });
+  }
+  for (auto& f : futures) f.get();
+}
+
+void test4(){
+  Dstp a = (double*)aligned_alloc(32, sizeof(double) * 2048 * 2048);
+  Dstp b = (double*)aligned_alloc(32, sizeof(double) * 2048 * 2048);
+  Dstp r = (double*)aligned_alloc(32, sizeof(double) * 2048 * 2048);
+
+  for (size_t i = 0; i < 2048 * 2048; ++i){
+    a[i] = i;
+    b[i] = i + 10;
+  }
+
+  clock_t sum = 0;
+  for (size_t i = 0; i < PERF_SIZE; ++i){
+    clock_t start = clock();
+    multi_thread_add2(r, a, b, 2048, 2048);
+    sum += clock() - start;
+  }
+
+  cout << "MTA: " << sum / (double)(CLOCKS_PER_SEC / 1000) << " ms" << endl;
+}
+
 
 int main(){
   int num_cpus = std::thread::hardware_concurrency();
@@ -126,4 +163,5 @@ int main(){
   test1();
   test2();
   test3();
+  test4();
 }

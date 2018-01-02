@@ -46,24 +46,25 @@ struct LocalValueNumberHash {
       case InstrType::Isnan0:     pr[0] = 19; break;
       case InstrType::GT0MC:      pr[0] = 20; break;
       case InstrType::GT0CM:      pr[0] = 21; break;
-      case InstrType::DRelu:      pr[0] = 22; break;
-      case InstrType::CELoss:     pr[0] = 23; break;
-      case InstrType::CEAccuracy: pr[0] = 24; break;
-      case InstrType::Sum:        pr[0] = 25; break;
-      case InstrType::L2Loss:     pr[0] = 26; break;
-      case InstrType::Sqrt:       pr[0] = 27; break;
-      case InstrType::DSS:        pr[0] = 28; break;
-      case InstrType::AddCC:      pr[0] = 29; break;
-      case InstrType::SubCC:      pr[0] = 30; break;
-      case InstrType::EMulCC:     pr[0] = 31; break;
-      case InstrType::EDivCC:     pr[0] = 32; break;
-      case InstrType::MSELoss:    pr[0] = 33; break;
-      case InstrType::SqrtC:      pr[0] = 34; break;
-      case InstrType::MSEAccuracy:pr[0] = 35; break;
-      case InstrType::Abs:        pr[0] = 36; break;
-      case InstrType::Trn1Dot:    pr[0] = 37; break;
-      case InstrType::Trn2Dot:    pr[0] = 38; break;
-      case InstrType::Trn3Dot:    pr[0] = 39; break;
+      case InstrType::Softmax:    pr[0] = 22; break;
+      case InstrType::DRelu:      pr[0] = 23; break;
+      case InstrType::CELoss:     pr[0] = 24; break;
+      case InstrType::CEAccuracy: pr[0] = 25; break;
+      case InstrType::Sum:        pr[0] = 26; break;
+      case InstrType::L2Loss:     pr[0] = 27; break;
+      case InstrType::Sqrt:       pr[0] = 28; break;
+      case InstrType::DSS:        pr[0] = 29; break;
+      case InstrType::AddCC:      pr[0] = 30; break;
+      case InstrType::SubCC:      pr[0] = 31; break;
+      case InstrType::EMulCC:     pr[0] = 32; break;
+      case InstrType::EDivCC:     pr[0] = 33; break;
+      case InstrType::MSELoss:    pr[0] = 34; break;
+      case InstrType::SqrtC:      pr[0] = 35; break;
+      case InstrType::MSEAccuracy:pr[0] = 36; break;
+      case InstrType::Abs:        pr[0] = 37; break;
+      case InstrType::Trn1Dot:    pr[0] = 38; break;
+      case InstrType::Trn2Dot:    pr[0] = 39; break;
+      case InstrType::Trn3Dot:    pr[0] = 40; break;
       //TODO: expand operation here
       default: assert(false);
     }
@@ -200,7 +201,7 @@ std::vector<LiveSet> analyze_liveness(SSA& ssa){
 //  reduce both register pressure as well as computation speed by condensing well known operations 
 //  into bigger CISC instructions that can do a faster job
 void select_instruction(SSA& ssa){
-  std::vector<Instr> nins, segment;
+  std::vector<Instr> nins, segment; //TODO: convert segment into a fixed size array
   std::vector<bool> done(ssa.instructions.size(), false);
   std::vector<LiveSet> lv = analyze_liveness(ssa);
   const size_t maxLookahead = 16;
