@@ -91,7 +91,7 @@ int main(){
   Mtx O, T, W;
   model.predict(O, read_function.testX);
   formula_compute(T, W, read_function.testX);
-  Mtx D = ML::abs(O) / ML::abs(T);
+  Mtx D = ML::abs(O - T) / ML::abs(T);
   ML::ReductionResult r = ML::sum(D) / D.rows();
   r.evaluate(arena);
   std::cout << "average:"<< r << std::endl;

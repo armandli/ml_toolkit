@@ -504,9 +504,9 @@ void memvaluateSSA(SSA& ssa, MemArena& arena){
   std::vector<Instr> instr = local_register_allocation(ssa, context, liveness);
 
   //GOTHERE
-  std::cout << "Final Instructions:" << std::endl;
-  for (size_t i = 0; i < instr.size(); ++i)
-    std::cout << instr[i];
+//  std::cout << "Final Instructions:" << std::endl;
+//  for (size_t i = 0; i < instr.size(); ++i)
+//    std::cout << instr[i];
 
   evaluate_cpu_instr(instr, context);
   release_ssa(context);
