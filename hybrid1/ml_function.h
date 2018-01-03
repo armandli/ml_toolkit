@@ -60,6 +60,19 @@ struct SigmoidFun {
   }
 };
 
+struct TanhFun {
+  template <typename A>
+  auto function(MtxBase<A>&& m) ->
+    decltype(ML::tanh(static_cast<A&&>(m))) {
+    return   ML::tanh(static_cast<A&&>(m));
+  }
+  template <typename A, typename B>
+  auto deriviative(MtxBase<A>&& dm, MtxBase<B>&& m) ->
+    decltype(static_cast<A&&>(dm) * (1. - static_cast<B&&>(m) * static_cast<B&&>(m))) {
+    return   static_cast<A&&>(dm) * (1. - static_cast<B&&>(m) * static_cast<B&&>(m));
+  }
+};
+
 struct ReluFun {
   template <typename A>
   auto function(MtxBase<A>&& m) ->
@@ -98,6 +111,31 @@ public:
     decltype(std::move(W) + MtxRef(V)) {
     V = V * mu - std::move(dW) * lrate;
     return std::move(W) + MtxRef(V);
+  }
+};
+
+//TODO: nesterov update
+
+class AdagradUpdate {
+  Mtx mW;
+public:
+  AdagradUpdate(size_t rsize, size_t csize): mW(rsize, csize) {}
+  auto update(MtxRef&& W, MtxRef&& dW, double lrate) ->
+    decltype(W + -1. * lrate * dW / (ML::sqrt(mW) + 1e-8)) {
+    mW = mW + std::move(dW) * std::move(dW);
+    return   W + -1. * lrate * dW / (ML::sqrt(mW) + 1e-8);
+  }
+};
+
+class RMSPropUpdate {
+  Mtx mW;
+  double decay;
+public:
+  RMSPropUpdate(size_t rsize, size_t csize, double decay = 0.99): mW(rsize, csize), decay(decay) {}
+  auto update(MtxRef&& W, MtxRef&& dW, double lrate) ->
+    decltype(W + -1. * lrate * dW / (ML::sqrt(mW) + 1e-8)) {
+    mW = decay * mW + (1. - decay) * (std::move(dW) * std::move(dW));
+    return   W + -1. * lrate * dW / (ML::sqrt(mW) + 1e-8);
   }
 };
 
