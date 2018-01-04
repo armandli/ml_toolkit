@@ -102,10 +102,7 @@ public:
     assert(v.size() >= r * c);
     double* ptr = (double*)aligned_alloc(ALIGNMENT_WIDTH, sizeof(double) * mRowStride * mColStride);
     set_data(ptr);
-    //TODO: use SSE instructions to do this
-    for (size_t ir = 0, k = 0; ir < r; ++ir, ++k)
-      for (size_t ic = 0; ic < c; ++ic)
-        data()[ir * mColStride + ic] = v[k];
+    SSE::copy_array_2d_sse_pd(ptr, v.data(), r, c, mColStride);
   }
   Mtx(size_t r, size_t c, RandomizationType rtype, double p1, double p2):
     Memory(nullptr, r, c), mRowStride(roundup_row(r)), mColStride(roundup_col(c)) {

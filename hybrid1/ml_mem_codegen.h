@@ -194,7 +194,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
           case InstrType::Sub:         SSE::sub_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
           case InstrType::EMul:        SSE::emul_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
           case InstrType::EDiv:        SSE::ediv_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
-          case InstrType::GT:          SSE::gt_1d_sse_pd(d, s1, s2, s1size.rs, roundup_col(s1size.cs)); break;
+          case InstrType::GT:          SSE::gt_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
           case InstrType::Mask:        SSE::mask_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
           case InstrType::DRelu:       SSE::drelu_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
           case InstrType::DSigmoid:    SSE::dsigmoid_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
@@ -307,8 +307,8 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         switch (si.mType){
           case InstrType::SubMC:  SSE::sub_mc_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
           case InstrType::EDivMC: SSE::ediv_mc_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
-          case InstrType::GTMC:   SSE::gt_mc_1d_sse_pd(d, s1, s2, s1size.rs, roundup_col(s1size.cs)); break;
-          case InstrType::GT0MC:  SSE::gt0_mc_1d_sse_pd(d, s1, s2, s1size.rs, roundup_col(s1size.cs)); break;
+          case InstrType::GTMC:   SSE::gt_mc_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
+          case InstrType::GT0MC:  SSE::gt0_mc_2d_sse_pd(d, s1, s2, s1size.rs, s1size.cs, roundup_col(s1size.cs)); break;
           default: assert(false);
         }
       }
@@ -328,8 +328,8 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         switch (si.mType){
           case InstrType::SubCM:  SSE::sub_cm_2d_sse_pd(s1, d, s2, s2size.rs, s2size.cs, roundup_col(s2size.cs)); break;
           case InstrType::EDivCM: SSE::ediv_cm_2d_sse_pd(s1, d, s2, s2size.rs, s2size.cs, roundup_col(s2size.cs)); break;
-          case InstrType::GTCM:   SSE::gt_cm_1d_sse_pd(s1, d, s2, s2size.rs, roundup_col(s2size.cs)); break;
-          case InstrType::GT0CM:  SSE::gt0_cm_1d_sse_pd(s1, s2, s2, s2size.rs, roundup_col(s2size.cs)); break;
+          case InstrType::GTCM:   SSE::gt_cm_2d_sse_pd(s1, d, s2, s2size.rs, s2size.cs, roundup_col(s2size.cs)); break;
+          case InstrType::GT0CM:  SSE::gt0_cm_2d_sse_pd(s1, s2, s2, s2size.rs, s2size.cs, roundup_col(s2size.cs)); break;
           default: assert(false);
         }
       }
@@ -415,6 +415,7 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         SSE::transpose4x4_2d_sse_pd(d, s1, roundup_row(s1size.cs), roundup_row(s1size.rs), roundup_col(s1size.cs), roundup_col(s1size.rs));
       }
       break;
+      case InstrType::Copy:
       case InstrType::Tanh:
       case InstrType::Softmax:
       case InstrType::Exp:
@@ -432,15 +433,16 @@ void evaluate_cpu_instr(const std::vector<Instr>& instr, MemInstrContext& ctx){
         if (ctx.type(si.mDst) == RegType::Reg)
           ctx.set_reg_size(si.mDst, sz.rs, sz.cs);
         switch (si.mType){
+          case InstrType::Copy:    SSE::copy_2d_sse_pd(d, s1, sz.rs, sz.cs, roundup_col(sz.cs)); break;
           case InstrType::Tanh:    SSE::tanh_2d_sse_pd(d, s1, sz.rs, sz.cs, roundup_col(sz.cs)); break;
           case InstrType::Softmax: SSE::softmax_r_2d_sse_pd(d, s1, sz.rs, sz.cs, roundup_col(sz.cs)); break;
           case InstrType::Exp:     SSE::exp_2d_sse_pd(d, s1, sz.rs, sz.cs, roundup_col(sz.cs)); break;
           case InstrType::Not:     SSE::not_2d_sse_pd(d, s1, sz.rs, sz.cs, roundup_col(sz.cs)); break;
-          case InstrType::Isnan:   SSE::isnan_1d_sse_pd(d, s1, sz.rs, roundup_col(sz.cs)); break;
-          case InstrType::Isnan0:  SSE::isnan0_1d_sse_pd(d, s1, sz.rs, roundup_col(sz.cs)); break;
-          case InstrType::Sqrt:    SSE::sqrt_1d_sse_pd(d, s1, sz.rs, roundup_col(sz.cs)); break;
+          case InstrType::Isnan:   SSE::isnan_2d_sse_pd(d, s1, sz.rs, sz.cs, roundup_col(sz.cs)); break;
+          case InstrType::Isnan0:  SSE::isnan0_2d_sse_pd(d, s1, sz.rs, sz.cs, roundup_col(sz.cs)); break;
+          case InstrType::Sqrt:    SSE::sqrt_2d_sse_pd(d, s1, sz.rs, sz.cs, roundup_col(sz.cs)); break;
           case InstrType::Abs:     MTXOP::abs_2d_mtxop_pd(d, s1, sz.rs, sz.cs, roundup_col(sz.cs)); break;
-          case InstrType::Sigmoid: SSE::sigmoid_1d_sse_pd(d, s1, sz.rs, roundup_col(sz.cs)); break;
+          case InstrType::Sigmoid: SSE::sigmoid_2d_sse_pd(d, s1, sz.rs, sz.cs, roundup_col(sz.cs)); break;
           default: assert(false);
         }
       }

@@ -77,6 +77,22 @@ public:
   }
 };
 
+/* BEGIN Copy */
+struct CopyOp {
+  static void debug(std::stringstream&& ss){
+    ss << "copy";
+  }
+};
+
+Uop<CopyOp, MtxRef> copy(MtxRef&& a){
+  return Uop<CopyOp, MtxRef>(std::move(a));
+}
+template <typename X>
+Uop<CopyOp, X> copy(MtxBase<X>&& a){
+  return Uop<CopyOp, X>(static_cast<X&&>(a));
+}
+/* END Copy */
+
 /* BEGIN Transpose */
 struct TrnOp {
   static void debug(std::stringstream& ss){

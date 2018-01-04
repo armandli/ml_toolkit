@@ -69,6 +69,7 @@ enum class InstrType : unsigned {
   GT0MC,
   GT0CM,
   DRelu,
+  Copy,
   Trn,
   Not,
   Tanh,
@@ -114,6 +115,7 @@ struct Instr {
 std::ostream& operator << (std::ostream& out, const Instr& instr){
   out << instr.mDst << " <- ";
   switch (instr.mType){
+    case InstrType::Copy:   out << "copy("; break;
     case InstrType::Trn:    out << "~"; break;
     case InstrType::Not:    out << "!"; break;
     case InstrType::Exp:    out << "exp("; break;
@@ -186,6 +188,7 @@ std::ostream& operator << (std::ostream& out, const Instr& instr){
     break;
     case InstrType::Exp: case InstrType::Isnan: case InstrType::Isnan0: case InstrType::Sigmoid:
     case InstrType::Sum: case InstrType::Sqrt: case InstrType::SqrtC: case InstrType::Abs:
+    case InstrType::Copy:
       out << ")";
     break;
     //TODO: expand operation here

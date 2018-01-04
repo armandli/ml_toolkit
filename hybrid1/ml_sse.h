@@ -141,6 +141,24 @@ void const_init_2d_sse_pd(Dstp dst, double v, size_t rows, size_t cols, size_t r
       _mm256_stream_pd(&dst[ir * colstride + ic], v256);
 }
 
+//TODO: unit test
+void copy_array_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t colstride){
+  for (size_t ir = 0, cnt = 0; ir < rows; ++ir)
+    for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ, cnt += MTX_BLOCK_RSZ){
+      __m256d r = _mm256_load_pd(&src[cnt]);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
+    }
+}
+
+//TODO: unit test
+void copy_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t colstride){
+  for (size_t ir = 0; ir < rows; ++ir)
+    for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
+      __m256d r = _mm256_load_pd(&src[ir * colstride + ic]);
+      _mm256_stream_pd(&dst[ir * colstride + ic], r);
+    }
+}
+
 void transpose4x4_2d_sse_pd(double* __restrict__ const dst, const double* __restrict__ const src, size_t mincols, size_t rowstride, size_t colstride, size_t dcolstride){
   for (size_t i = 0; i < rowstride; i += MTX_BLOCK_RSZ)
     for (size_t j = 0; j < mincols; j += MTX_BLOCK_RSZ){
@@ -445,21 +463,14 @@ void isnan0_1d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t colstride){
 void isnan0_2d_sse_pd(Dstp dst, Srcp src, size_t rows, size_t cols, size_t colstride){
   __m256i oi = _mm256_set1_epi64x(oned);
   __m256d ov = _mm256_castsi256_pd(oi);
-  for (size_t ir = 0; ir < rows; ++ir){
-    for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
+  for (size_t ir = 0; ir < rows; ++ir)
+    for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
       __m256d a = _mm256_load_pd(&src[ir * colstride + ic]);
       __m256d b = SPPL::_mm256_isnan_pd(a);
       __m256d c = _mm256_xor_pd(b, ov);
       __m256d r = _mm256_and_pd(a, c);
       _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
-    for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
-      if (std::isnan(src[ir * colstride + ic]))
-        dst[ir * colstride + ic] = 0.;
-      else
-        dst[ir * colstride + ic] = src[ir * colstride + ic];
-    }
-  }
 }
 
 //TODO: unit test
@@ -495,20 +506,13 @@ void gt0_mc_1d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t colstrid
 //TODO: unit test
 void gt0_mc_2d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t cols, size_t colstride){
   const __m256d val = _mm256_set1_pd(v);
-  for (size_t ir = 0; ir < rows; ++ir){
-    for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
+  for (size_t ir = 0; ir < rows; ++ir)
+    for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
       __m256d a = _mm256_load_pd(&src[ir * colstride + ic]);
       __m256d b = _mm256_cmp_pd(a, val, _CMP_GT_OQ);
       __m256d r = _mm256_and_pd(a, b);
       _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
-    for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
-      if (src[ir * colstride + ic] > v)
-        dst[ir * colstride + ic] = src[ir * colstride + ic];
-      else
-        dst[ir * colstride + ic] = 0.;
-    }
-  }
 }
 
 //TODO: unit test
@@ -525,20 +529,13 @@ void gt0_cm_1d_sse_pd(double v, Dstp dst, Srcp src, size_t rows, size_t colstrid
 //TODO: unit test
 void gt0_cm_2d_sse_pd(double v, Dstp dst, Srcp src, size_t rows, size_t cols, size_t colstride){
   const __m256d val = _mm256_set1_pd(v);
-  for (size_t ir = 0; ir < rows; ++ir){
-    for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
+  for (size_t ir = 0; ir < rows; ++ir)
+    for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
       __m256d a = _mm256_load_pd(&src[ir * colstride + ic]);
       __m256d b = _mm256_cmp_pd(val, a, _CMP_GT_OQ);
       __m256d r = _mm256_and_pd(a, b);
       _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
-    for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
-      if (v > src[ir * colstride + ic])
-        dst[ir * colstride + ic] = src[ir * colstride + ic];
-      else
-        dst[ir * colstride + ic] = 0.;
-    }
-  }
 }
 
 //TODO: unit test
@@ -553,20 +550,13 @@ void gt_1d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t colstride){
 
 //TODO: unit test
 void gt_2d_sse_pd(Dstp dst, Srcp s1, Srcp s2, size_t rows, size_t cols, size_t colstride){
-  for (size_t ir = 0; ir < rows; ++ir){
-    for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
+  for (size_t ir = 0; ir < rows; ++ir)
+    for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
       __m256d a = _mm256_load_pd(&s1[ir * colstride + ic]);
       __m256d b = _mm256_load_pd(&s2[ir * colstride + ic]);
       __m256d r = _mm256_cmp_pd(a, b, _CMP_GT_OQ);
       _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
-    for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
-      if (s1[ir * colstride + ic] > s2[ir * colstride + ic])
-        dst[ir * colstride + ic] = *(double*)(long long*)&oned;
-      else
-        dst[ir * colstride + ic] = 0.;
-    }
-  }
 }
 
 //TODO: unit test
@@ -582,19 +572,12 @@ void gt_mc_1d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t colstride
 //TODO: unit test
 void gt_mc_2d_sse_pd(Dstp dst, Srcp src, double v, size_t rows, size_t cols, size_t colstride){
   const __m256d val = _mm256_set1_pd(v);
-  for (size_t ir = 0; ir < rows; ++ir){
-    for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
+  for (size_t ir = 0; ir < rows; ++ir)
+    for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
       __m256d a = _mm256_load_pd(&src[ir * colstride + ic]);
       __m256d r = _mm256_cmp_pd(a, val, _CMP_GT_OQ);
       _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
-    for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
-      if (src[ir * colstride + ic] > v)
-        dst[ir * colstride + ic] = *(double*)(long long*)&oned;
-      else
-        dst[ir * colstride + ic] = 0.;
-    }
-  }
 }
 
 //TODO: unit test
@@ -610,19 +593,12 @@ void gt_cm_1d_sse_pd(double v, Dstp dst, Srcp src, size_t rows, size_t colstride
 //TODO: unit test
 void gt_cm_2d_sse_pd(double v, Dstp dst, Srcp src, size_t rows, size_t cols, size_t colstride){
   const __m256d val = _mm256_set1_pd(v);
-  for (size_t ir = 0; ir < rows; ++ir){
-    for (size_t ic = 0; ic < (cols & ~MTX_BLOCK_RMASK); ic += MTX_BLOCK_RSZ){
+  for (size_t ir = 0; ir < rows; ++ir)
+    for (size_t ic = 0; ic < cols; ic += MTX_BLOCK_RSZ){
       __m256d a = _mm256_load_pd(&src[ir * colstride + ic]);
       __m256d r = _mm256_cmp_pd(val, a, _CMP_GT_OQ);
       _mm256_stream_pd(&dst[ir * colstride + ic], r);
     }
-    for (size_t ic = (cols & ~MTX_BLOCK_RMASK); ic < cols; ++ic){
-      if (v > src[ir * colstride + ic])
-        dst[ir * colstride + ic] = *(double*)(long long*)&oned;
-      else
-        dst[ir * colstride + ic] = 0.;
-    }
-  }
 }
 
 //TODO: unit test

@@ -114,16 +114,28 @@ public:
   }
 };
 
-//TODO: nesterov update
+class NesterovUpdate {
+  Mtx Vp, V;
+  double mu;
+public:
+  NesterovUpdate(size_t rsize, size_t csize, double mu = 0.9):
+    Vp(rsize, csize), V(rsize, csize), mu(mu) {}
+  auto update(MtxRef& W, MtxRef&& dW, double lrate) ->
+    decltype(std::move(W) + MtxRef(Vp) * (mu * -1.) + MtxRef(V) * (1. + mu)) {
+    Vp = ML::copy(MtxRef(V));
+    V = MtxRef(V) * mu - std::move(dW) * lrate;
+    return   std::move(W) + MtxRef(Vp) * (mu * -1.) + MtxRef(V) * (1. + mu);
+  }
+};
 
 class AdagradUpdate {
   Mtx mW;
 public:
   AdagradUpdate(size_t rsize, size_t csize): mW(rsize, csize) {}
   auto update(MtxRef&& W, MtxRef&& dW, double lrate) ->
-    decltype(W + -1. * lrate * dW / (ML::sqrt(mW) + 1e-8)) {
+    decltype(std::move(W) + -1. * lrate * std::move(dW) / (ML::sqrt(std::move(mW)) + 1e-8)) {
     mW = mW + std::move(dW) * std::move(dW);
-    return   W + -1. * lrate * dW / (ML::sqrt(mW) + 1e-8);
+    return   std::move(W) + -1. * lrate * std::move(dW) / (ML::sqrt(std::move(mW)) + 1e-8);
   }
 };
 
@@ -133,9 +145,9 @@ class RMSPropUpdate {
 public:
   RMSPropUpdate(size_t rsize, size_t csize, double decay = 0.99): mW(rsize, csize), decay(decay) {}
   auto update(MtxRef&& W, MtxRef&& dW, double lrate) ->
-    decltype(W + -1. * lrate * dW / (ML::sqrt(mW) + 1e-8)) {
+    decltype(std::move(W) + -1. * lrate * std::move(dW) / (ML::sqrt(std::move(mW)) + 1e-8)) {
     mW = decay * mW + (1. - decay) * (std::move(dW) * std::move(dW));
-    return   W + -1. * lrate * dW / (ML::sqrt(mW) + 1e-8);
+    return   std::move(W) + -1. * lrate * std::move(dW) / (ML::sqrt(std::move(mW)) + 1e-8);
   }
 };
 

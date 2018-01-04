@@ -86,6 +86,14 @@ template <> RegName to_ssa(SSA& ret, const MtxBase<MtxRef>& expr){
 template <> RegName to_ssa(SSA& ret, const MtxBase<Scl>& expr){
   return ret.context.gen(static_cast<const Scl&>(expr).val());
 }
+template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<CopyOp, X>>& expr){
+  RegName p1 = to_ssa(ret, static_cast<const Uop<CopyOp, X>&>(expr).param());
+  const SSAregData& p1dat = ret.context.lookup(p1);
+  RegName p2 = ret.context.gen();
+  RegName dst = ret.context.gen(nullptr, p1dat.mRows, p1dat.mCols);
+  ret.instructions.emplace_back(Instr(InstrType::Copy, dst, p1, p2));
+  return dst;
+}
 template <typename X> RegName to_ssa(SSA& ret, const MtxBase<Uop<TrnOp, X>>& expr){
   RegName p1 = to_ssa(ret, static_cast<const Uop<TrnOp, X>&>(expr).param());
   const SSAregData& p1dat = ret.context.lookup(p1);
@@ -473,6 +481,9 @@ std::ostream& operator << (std::ostream& out, const SSA& ssa){
       break;
       case InstrType::Trn3Dot:
         out << instr.mDst << " <- ~" << instr.mSrc1 << " ^ ~" << instr.mSrc2 << "\n";
+      break;
+      case InstrType::Copy:
+        out << instr.mDst << " <- copy(" << instr.mSrc1 << ")\n";
       break;
       case InstrType::Trn:
         out << instr.mDst << " <- ~" << instr.mSrc1 << "\n";
