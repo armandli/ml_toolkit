@@ -37,7 +37,7 @@ void rnd_normal_init_2d_mtxop_pd(Dstp dst, double ex, double sd, size_t rows, si
 size_t max_row_coeff_idx_2d_mtxop_pd(Srcp m, size_t row, size_t cols, size_t colstride){
   Srcp elem = std::max_element(&m[row * colstride], &m[row * colstride + cols]);
   assert(elem != nullptr);
-  return (elem - &m[row * colstride]) / sizeof(double);
+  return elem - &m[row * colstride];
 }
 
 void msvm_loss_2d_mtxop_pd(Dstp dst, Srcp o, Srcp y, double f, size_t rows, size_t cols, size_t colstride){

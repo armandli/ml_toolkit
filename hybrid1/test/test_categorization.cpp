@@ -15,6 +15,8 @@
 using ML::Mtx;
 using namespace std;
 
+using Model = ML::FFN2<ML::CrossEntropy, ML::ReluFun, ML::L2Reg, ML::MomentumUpdate>;
+
 void create_input(const vector<double> v, Mtx& trainX, Mtx& trainY, Mtx& testX, Mtx& testY){
   size_t total_rows = v.size() / 3;
 
@@ -46,8 +48,6 @@ void create_input(const vector<double> v, Mtx& trainX, Mtx& trainY, Mtx& testX, 
       testR++;
     }
 }
-
-using Model = ML::FFN2<ML::CrossEntropy, ML::ReluFun, ML::L2Reg, ML::AdamUpdate>;
 
 int main(){
   ifstream file("../../data/spiral_dataset.txt");
